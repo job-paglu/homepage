@@ -23,6 +23,25 @@ export const ROUTES = {
   terms: '/terms',
 } as const;
 
+/**
+ * Hosts we own but do not serve from this project.
+ *
+ * `jobpaglu.eu.cc` is the apex site (served from GitHub Pages) and carries its
+ * own job links. This platform lives on the `home.` subdomain, so the two are
+ * separate deployments of one brand and should link to each other.
+ *
+ * Kept OUT of `ROUTES` deliberately: everything in `ROUTES` is a path this app
+ * serves and the sitemap enumerates. An absolute URL to another deployment is
+ * neither, and putting it there would eventually put a foreign host in our
+ * sitemap.
+ *
+ * These are also the only URLs allowed to use `external="trusted"` on a Button —
+ * see that component for why `nofollow` is wrong for a site you own.
+ */
+export const OWNED_EXTERNAL = {
+  mainSite: 'https://jobpaglu.eu.cc',
+} as const;
+
 // ------------------------------------------------------------------- emitting
 
 /**

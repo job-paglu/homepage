@@ -20,7 +20,15 @@ import { copy } from '@lib/copy';
 import { isCurrentPath, ROUTES } from '@lib/urls';
 
 interface Props {
-  links: ReadonlyArray<{ href: string; label: string }>;
+  // `external` items point at a site we own, so they get noopener/noreferrer
+  // but not nofollow. Kept structurally identical to Header's list so one array
+  // can feed the desktop nav, this panel and the noscript fallback.
+  links: ReadonlyArray<{
+    href: string;
+    label: string;
+    external?: boolean;
+    ariaLabel?: string;
+  }>;
   currentPath: string;
 }
 
@@ -55,6 +63,9 @@ const panelId = 'jp-mobile-menu';
             <a
               class={styles.panelLink}
               href={link.href}
+              target={link.external ? '_blank' : undefined}
+              rel={link.external ? 'noopener noreferrer' : undefined}
+              aria-label={link.ariaLabel}
               aria-current={isCurrentPath(currentPath, link.href) ? 'page' : undefined}
             >
               {link.label}

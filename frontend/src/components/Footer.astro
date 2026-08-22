@@ -13,14 +13,30 @@
 import Logo from '@components/Logo.astro';
 import styles from '@styles/footer.module.css';
 import { copy } from '@lib/copy';
-import { ROUTES } from '@lib/urls';
+import { ROUTES, OWNED_EXTERNAL } from '@lib/urls';
 
 const year = new Date().getUTCFullYear();
 
-const explore = [
+// Explicitly annotated rather than `as const`: a const array becomes a UNION of
+// literal object types, and reading `.external` off a union where only one member
+// declares it is a type error. Same annotation as Header's list, deliberately, so
+// one shape feeds both.
+const explore: ReadonlyArray<{
+  href: string;
+  label: string;
+  external?: boolean;
+  ariaLabel?: string;
+}> = [
   { href: ROUTES.home, label: copy.nav.home },
   { href: ROUTES.jobs, label: copy.nav.jobs },
-] as const;
+  // The apex site, which carries its own job links. Owned, so no nofollow.
+  {
+    href: OWNED_EXTERNAL.mainSite,
+    label: copy.nav.jobLinks,
+    external: true,
+    ariaLabel: copy.nav.jobLinksAria,
+  },
+];
 
 const legal = [
   { href: ROUTES.privacy, label: copy.nav.privacy },
@@ -44,7 +60,13 @@ const legal = [
         {
           explore.map((link) => (
             <li>
-              <a class={styles.link} href={link.href}>
+              <a
+                class={styles.link}
+                href={link.href}
+                target={link.external ? '_blank' : undefined}
+                rel={link.external ? 'noopener noreferrer' : undefined}
+                aria-label={link.ariaLabel}
+              >
                 {link.label}
               </a>
             </li>

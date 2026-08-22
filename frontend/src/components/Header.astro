@@ -17,7 +17,7 @@ import Logo from '@components/Logo.astro';
 import MobileMenu from '@components/MobileMenu.astro';
 import styles from '@styles/header.module.css';
 import { copy } from '@lib/copy';
-import { isCurrentPath, ROUTES } from '@lib/urls';
+import { isCurrentPath, ROUTES, OWNED_EXTERNAL } from '@lib/urls';
 
 interface Props {
   /** `Astro.url.pathname`, for aria-current. */
@@ -26,10 +26,30 @@ interface Props {
 
 const { currentPath } = Astro.props;
 
-const links = [
+/**
+ * One list, rendered three times: the desktop nav, the mobile panel, and the
+ * `<noscript>` fallback. Adding an entry here reaches all three, which is why
+ * the external link goes in the list rather than being hand-placed in one of
+ * them and quietly missing from the other two.
+ *
+ * `external` items point at a site we own (see OWNED_EXTERNAL), so they get
+ * `noopener noreferrer` but NOT `nofollow`.
+ */
+const links: ReadonlyArray<{
+  href: string;
+  label: string;
+  external?: boolean;
+  ariaLabel?: string;
+}> = [
   { href: ROUTES.home, label: copy.nav.home },
   { href: ROUTES.jobs, label: copy.nav.jobs },
-] as const;
+  {
+    href: OWNED_EXTERNAL.mainSite,
+    label: copy.nav.jobLinks,
+    external: true,
+    ariaLabel: copy.nav.jobLinksAria,
+  },
+];
 ---
 
 <header class={styles.header}>
@@ -46,7 +66,12 @@ const links = [
               <a
                 class={styles.link}
                 href={link.href}
-                aria-current={isCurrentPath(currentPath, link.href) ? 'page' : undefined}
+                target={link.external ? '_blank' : undefined}
+                rel={link.external ? 'noopener noreferrer' : undefined}
+                aria-label={link.ariaLabel}
+                aria-current={
+                  !link.external && isCurrentPath(currentPath, link.href) ? 'page' : undefined
+                }
               >
                 {link.label}
               </a>
@@ -70,7 +95,13 @@ const links = [
         {
           links.map((link) => (
             <li>
-              <a class={styles.link} href={link.href}>
+              <a
+                class={styles.link}
+                href={link.href}
+                target={link.external ? '_blank' : undefined}
+                rel={link.external ? 'noopener noreferrer' : undefined}
+                aria-label={link.ariaLabel}
+              >
                 {link.label}
               </a>
             </li>

@@ -34,6 +34,17 @@ export const copy = {
     closeMenu: 'Close menu',
     menuLabel: 'Site menu',
     logoHome: 'Job Paglu — home',
+    /**
+     * Link to the apex site, which carries its own job links. Short enough for
+     * the header at 900px, where space is tight.
+     */
+    jobLinks: 'Job Links',
+    /**
+     * Accessible name. Says the destination and that it opens a new tab, because
+     * "Job Links" alone tells a screen-reader user neither. Descriptive link
+     * text is a WCAG 2.1 requirement the project committed to.
+     */
+    jobLinksAria: 'Job Links on jobpaglu.eu.cc — opens in a new tab',
   },
 
   home: {

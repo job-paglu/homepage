@@ -20,8 +20,22 @@ interface Props {
   full?: boolean;
   type?: 'button' | 'submit';
   disabled?: boolean;
-  /** Adds target/rel and the outbound glyph. Only ever true for external hosts. */
-  external?: boolean;
+  /**
+   * Adds target/rel and the outbound glyph. Only ever set for external hosts.
+   *
+   * `true`        — an UNTRUSTED third party, e.g. an employer's apply URL.
+   *                 Gets `nofollow`, so we pass no link equity to a destination
+   *                 an administrator typed and nobody vetted (contract §7).
+   * `'trusted'`   — a site we own, e.g. the sibling jobpaglu.eu.cc. Gets
+   *                 `noopener noreferrer` but deliberately **NOT** `nofollow`:
+   *                 nofollow on your own domain throws away internal link
+   *                 equity for no benefit, which is an SEO own-goal on a
+   *                 project where SEO is a stated requirement.
+   *
+   * The distinction exists because the two cases look identical in markup and
+   * are opposite in intent.
+   */
+  external?: boolean | 'trusted';
   class?: string | undefined;
   id?: string | undefined;
   'aria-label'?: string | undefined;
@@ -52,17 +66,25 @@ const classes = [
 ];
 
 /**
- * `nofollow` as well as `noopener noreferrer`: outbound apply links are
- * untrusted third-party destinations and must not pass link equity
- * (contract section 7).
+ * `noopener noreferrer` on anything outbound; `nofollow` only for untrusted
+ * destinations.
+ *
+ * An employer's apply URL is typed by an administrator and vetted by nobody, so
+ * it gets `nofollow` (contract section 7). A site we own does not — see the
+ * `external` prop docs.
  *
  * A single object shape with `undefined` values rather than a union of `{}` and
  * `{target, rel}`: Astro drops attributes whose value is `undefined`, and one
  * stable shape keeps the spread's type simple.
  */
+const isOutbound = external !== false;
 const externalAttrs = {
-  target: external ? '_blank' : undefined,
-  rel: external ? 'noopener noreferrer nofollow' : undefined,
+  target: isOutbound ? '_blank' : undefined,
+  rel: isOutbound
+    ? external === 'trusted'
+      ? 'noopener noreferrer'
+      : 'noopener noreferrer nofollow'
+    : undefined,
 };
 ---
 
