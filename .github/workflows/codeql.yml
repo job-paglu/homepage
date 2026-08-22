@@ -93,7 +93,7 @@ jobs:
             build-mode: none
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # setup-go before init so autobuild uses the pinned toolchain rather than
       # whatever version the runner image happens to ship.

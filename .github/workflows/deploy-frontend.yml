@@ -82,7 +82,7 @@ jobs:
 
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Fail before installing anything, with an explanation that points at the
       # better option rather than just naming a missing secret.
