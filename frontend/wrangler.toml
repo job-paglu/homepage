@@ -35,7 +35,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "job-paglu"
-database_id = "00000000-0000-0000-0000-000000000000" # PLACEHOLDER — replace locally
+database_id = "d8894bbe-2207-488d-abe2-415d03a567c2"
 migrations_dir = "migrations"
 
 # Preview deployments get their own database. Sharing one with production is the
@@ -43,7 +43,7 @@ migrations_dir = "migrations"
 [[env.preview.d1_databases]]
 binding = "DB"
 database_name = "job-paglu-preview"
-database_id = "00000000-0000-0000-0000-000000000000" # PLACEHOLDER — replace locally
+database_id = "afda2314-d94a-4177-88f5-c24a71383892"
 migrations_dir = "migrations"
 
 # ------------------------------------------------------------------- variables
