@@ -40,6 +40,13 @@ export const ROUTES = {
  */
 export const OWNED_EXTERNAL = {
   mainSite: 'https://jobpaglu.eu.cc',
+  /**
+   * The resume builder. This subdomain 302-redirects to the hosted Reactive
+   * Resume app; pointing the nav here rather than at the app directly means the
+   * link never changes if the redirect target is later swapped for a
+   * self-hosted instance on the same subdomain.
+   */
+  resume: 'https://resume.jobpaglu.eu.cc',
 } as const;
 
 // ------------------------------------------------------------------- emitting

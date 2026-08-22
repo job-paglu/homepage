@@ -45,6 +45,9 @@ export const copy = {
      * text is a WCAG 2.1 requirement the project committed to.
      */
     jobLinksAria: 'Job Links on jobpaglu.eu.cc — opens in a new tab',
+    /** Link to the resume builder on the resume. subdomain (redirects to the app). */
+    resume: 'Resume Builder',
+    resumeAria: 'Build a resume on resume.jobpaglu.eu.cc — opens in a new tab',
   },
 
   home: {
