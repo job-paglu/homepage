@@ -22,7 +22,7 @@
     "cf:migrate": "wrangler d1 migrations apply job-paglu --local"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^12.6.13",
+    "@astrojs/cloudflare": "^14.2.2",
     "@astrojs/react": "^4.3.0",
     "astro": "^5.13.0",
     "react": "^19.1.0",
