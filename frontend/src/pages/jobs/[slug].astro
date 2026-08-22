@@ -1,0 +1,195 @@
+---
+/**
+ * Job detail. Server-rendered, edge-cached 300s (contract section 3).
+ *
+ * Reads D1 in-process through the job service — same Worker as the API, so no
+ * HTTP hop and no base URL to misconfigure (`src/lib/publicJobs.ts`).
+ *
+ * ---------------------------------------------------------------------------
+ * The 404, and why the STATUS is the point
+ * ---------------------------------------------------------------------------
+ * An unknown slug must answer HTTP **404**, not a 200 carrying 404-looking
+ * markup. A "soft 404" gets indexed, and an indexed not-found page competes in
+ * search results against the real jobs on this site.
+ *
+ * The mechanism is `Astro.response.status = 404` plus the not-found content
+ * rendered inline, and it depends on two things that are both asserted here:
+ *
+ *   1. `export const prerender = false`. A prerendered page is a file on a CDN;
+ *      it has no response object to mutate, so the assignment would silently do
+ *      nothing. This is the failure that makes a soft 404 look like a code bug
+ *      when it is really a rendering-mode bug.
+ *   2. Nothing after the assignment returns a different `Response`. Astro
+ *      applies `Astro.response` to the rendered page, so status and body agree.
+ *
+ * The two alternatives are both wrong: `new Response(null, {status: 404})` sends
+ * a genuinely empty body, and `Astro.redirect('/404')` answers 302-then-200.
+ *
+ * A service failure is answered **503**, not 404 and not 200. "The database is
+ * unreachable" and "this job does not exist" are different facts, and a
+ * monitoring system that cannot tell them apart is useless.
+ * ---------------------------------------------------------------------------
+ *
+ * The description is plain text with newlines, never HTML (contract section 2.2).
+ * It is split into paragraphs and each one is escaped by Astro. `set:html` is
+ * never used on it, and `descriptionParagraphs` returning `string[]` rather than
+ * a joined HTML string is what makes that hard to get wrong later.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import ApplyButton from '@components/ApplyButton.astro';
+import Badge from '@components/Badge.astro';
+import Button from '@components/Button.astro';
+import ErrorState from '@components/ErrorState.astro';
+import JobMeta from '@components/JobMeta.astro';
+import styles from '@styles/page.module.css';
+import { describeFailure, getPublishedJob, getRuntimeEnv } from '@lib/publicJobs';
+import type { PageFailure } from '@lib/publicJobs';
+import { copy } from '@lib/copy';
+import { descriptionParagraphs, nonEmpty } from '@lib/format';
+import { buildJobPostingJsonLd, jobMetaDescription, pageTitle } from '@lib/seo';
+import { absoluteUrl, jobPath, ROUTES } from '@lib/urls';
+import type { Job } from '@lib/types';
+
+// Load-bearing for the 404 status. See the block comment above.
+export const prerender = false;
+
+const slug = Astro.params.slug;
+
+let job: Job | null = null;
+let failure: PageFailure | null = null;
+
+try {
+  const env = getRuntimeEnv(Astro.locals);
+  // An absent or empty slug is "not found", not a crash: `getPublishedJob`
+  // returns null for it, so this route has exactly one not-found path.
+  job = await getPublishedJob(env, typeof slug === 'string' ? slug : '');
+} catch (error) {
+  failure = describeFailure(error);
+}
+
+if (failure !== null) {
+  Astro.response.status = 503;
+} else if (job === null) {
+  Astro.response.status = 404;
+}
+
+/**
+ * A 404 and a transient failure must not be cached for five minutes: the job may
+ * be published moments later, and a 300s edge cache would keep serving the
+ * wrong answer. Only the success path gets the long cache, and a real failure is
+ * not cached at all.
+ */
+Astro.response.headers.set(
+  'Cache-Control',
+  job !== null
+    ? 'public, max-age=0, s-maxage=300, stale-while-revalidate=600'
+    : failure !== null
+      ? 'no-store'
+      : 'public, max-age=0, s-maxage=30',
+);
+
+const canonicalPath = job !== null ? jobPath(job.slug) : Astro.url.pathname;
+const canonical = absoluteUrl(canonicalPath, Astro.site);
+
+const title = job !== null ? pageTitle(job.title) : pageTitle(copy.notFound.metaTitle);
+const description =
+  job !== null ? jobMetaDescription(job) : copy.notFound.metaDescription;
+
+const paragraphs = job !== null ? descriptionParagraphs(job.description) : [];
+const company = job !== null ? nonEmpty(job.company) : null;
+const jsonLd = job !== null ? buildJobPostingJsonLd(job, { url: canonical }) : undefined;
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  canonical={canonical}
+  ogType={job !== null ? 'article' : 'website'}
+  noindex={job === null}
+  jsonLd={jsonLd}
+  showPopup={job !== null}
+>
+  {
+    job !== null ? (
+      <section class={styles.section}>
+        <div class="jp-container">
+          <a class={styles.back} href={ROUTES.jobs}>
+            <span aria-hidden="true">&#8592;</span>
+            {copy.job.backToJobs}
+          </a>
+
+          <div class={styles.head}>
+            <div class={styles.headRow}>
+              <h1 class={styles.title}>{job.title}</h1>
+              {job.is_featured && <Badge label={copy.job.featured} tone="featured" withDot />}
+            </div>
+            {company && <p class={styles.support}>{company}</p>}
+          </div>
+
+          <div class={styles.detailGrid}>
+            <div>
+              <div class={styles.card}>
+                <h2 class={styles.cardTitle}>{copy.job.detailsHeading}</h2>
+                <JobMeta job={job} variant="detail" />
+              </div>
+
+              {/* Validation guarantees a description of at least 20 characters
+                  (contract section 9), so this is belt-and-braces — but a
+                  heading above an empty box is a worse failure than no heading. */}
+              {paragraphs.length > 0 && (
+                <>
+                  <hr class={styles.divider} />
+                  <h2 class={styles.blockTitle}>{copy.job.descriptionHeading}</h2>
+                  <div class={styles.description}>
+                    {paragraphs.map((paragraph) => (
+                      <p class={styles.paragraph}>{paragraph}</p>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <aside class={styles.detailAside} aria-labelledby="apply-heading">
+              <div class={styles.applyPanel}>
+                <h2 class={styles.applyHeading} id="apply-heading">
+                  {copy.job.applyPanelHeading}
+                </h2>
+                <ApplyButton job={job} variant="detail" size="lg" full />
+                <p class={styles.applyNote}>{copy.job.applyPanelNote}</p>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+    ) : failure !== null ? (
+      <section class={styles.section}>
+        <div class="jp-container">
+          {/* The page still needs exactly one h1, but ErrorState already shows
+              this text visibly — rendering it twice would be a duplicate
+              heading on screen and read twice by a screen reader. */}
+          <h1 class="jp-visually-hidden">{copy.states.errorTitle}</h1>
+          <ErrorState
+            message={failure.message}
+            retryable={failure.retryable}
+            retryHref={Astro.url.pathname}
+          />
+        </div>
+      </section>
+    ) : (
+      /* 404: the slug does not exist, or the job is draft, unpublished,
+         soft-deleted or expired. The public service cannot distinguish those
+         cases on purpose (contract section 3), so neither can this page. */
+      <section class={styles.section}>
+        <div class:list={['jp-container', styles.centred]}>
+          <p class={styles.statusCode}>404</p>
+          <h1 class={styles.title}>{copy.notFound.heading}</h1>
+          <p class={styles.support}>{copy.notFound.body}</p>
+          <div class={styles.centredActions}>
+            <Button href={ROUTES.jobs} variant="primary">{copy.notFound.action}</Button>
+            <Button href={ROUTES.home} variant="quiet">{copy.notFound.secondaryAction}</Button>
+          </div>
+        </div>
+      </section>
+    )
+  }
+</BaseLayout>

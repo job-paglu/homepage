@@ -1,0 +1,205 @@
+/* Page-level scaffolding shared by index, jobs, job detail, 404 and the legal
+   pages. Not a component: these are the few rules that describe a *page* rather
+   than a thing on it. */
+
+.section {
+  padding-block: var(--jp-section-y);
+}
+
+.sectionTight {
+  padding-block: var(--jp-space-10);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jp-space-3);
+  margin-bottom: var(--jp-space-8);
+  min-width: 0;
+}
+
+.headRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--jp-space-3);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--jp-text-3xl);
+  letter-spacing: var(--jp-tracking-tight);
+}
+
+.titleSmall {
+  font-size: var(--jp-text-2xl);
+}
+
+.support {
+  margin: 0;
+  max-width: var(--jp-measure);
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-md);
+  line-height: var(--jp-leading-relaxed);
+}
+
+.count {
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.headLink {
+  font-size: var(--jp-text-base);
+  font-weight: var(--jp-weight-semibold);
+  white-space: nowrap;
+}
+
+/* --- Breadcrumb / back link ---------------------------------------------- */
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--jp-space-2);
+  min-height: var(--jp-control-h);
+  margin-bottom: var(--jp-space-2);
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-sm);
+  font-weight: var(--jp-weight-medium);
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--jp-brand);
+  text-decoration: underline;
+}
+
+/* --- Job detail ----------------------------------------------------------- */
+
+.detailGrid {
+  display: grid;
+  gap: var(--jp-space-8);
+  align-items: start;
+  min-width: 0;
+}
+
+/* Two columns from 1024px, with the apply panel as a sticky sidebar. Below
+   that it sits above the description, because on a phone the action a visitor
+   came for should not be at the bottom of a 2000-word description. */
+@media (min-width: 1024px) {
+  .detailGrid {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+    gap: var(--jp-space-12);
+  }
+
+  .detailAside {
+    position: sticky;
+    top: calc(var(--jp-header-h) + var(--jp-space-6));
+  }
+}
+
+.card {
+  min-width: 0;
+  padding: var(--jp-space-6);
+  border: 1px solid var(--jp-border);
+  border-radius: var(--jp-radius-lg);
+  background-color: var(--jp-surface);
+  box-shadow: var(--jp-shadow-xs);
+}
+
+.cardTitle {
+  margin: 0 0 var(--jp-space-5);
+  font-size: var(--jp-text-lg);
+}
+
+.blockTitle {
+  margin: 0 0 var(--jp-space-4);
+  font-size: var(--jp-text-xl);
+}
+
+/* Job descriptions are plain text with newlines (contract 2.2). Each blank-line
+   block becomes its own <p>; `pre-line` then preserves the single newlines
+   inside a block, so a hand-typed list survives without any markup injection. */
+.description {
+  max-width: var(--jp-measure);
+  color: var(--jp-ink-soft);
+  font-size: var(--jp-text-md);
+  line-height: var(--jp-leading-relaxed);
+}
+
+.paragraph {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: break-word;
+}
+
+.paragraph + .paragraph {
+  margin-top: var(--jp-space-5);
+}
+
+.applyPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jp-space-4);
+  min-width: 0;
+  padding: var(--jp-space-6);
+  border: 1px solid var(--jp-border-strong);
+  border-radius: var(--jp-radius-lg);
+  background-color: var(--jp-brand-wash);
+}
+
+.applyHeading {
+  margin: 0;
+  font-size: var(--jp-text-lg);
+}
+
+.applyNote {
+  margin: 0;
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-sm);
+  line-height: var(--jp-leading-normal);
+}
+
+.divider {
+  height: 1px;
+  border: 0;
+  margin-block: var(--jp-space-8);
+  background-color: var(--jp-border);
+}
+
+/* --- Centred pages (404) -------------------------------------------------- */
+
+.centred {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--jp-space-4);
+  padding-block: var(--jp-space-20);
+  text-align: center;
+}
+
+.centredActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--jp-space-3);
+  margin-top: var(--jp-space-4);
+}
+
+.statusCode {
+  color: var(--jp-ink-faint);
+  font-family: var(--jp-font-mono);
+  font-size: var(--jp-text-sm);
+  letter-spacing: var(--jp-tracking-wide);
+}
+
+/* --- Legal pages ---------------------------------------------------------- */
+
+.legalMeta {
+  margin: 0 0 var(--jp-space-8);
+  color: var(--jp-ink-faint);
+  font-size: var(--jp-text-sm);
+}

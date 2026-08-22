@@ -1,0 +1,167 @@
+# =============================================================================
+# Deploy the frontend to Vercel — MANUAL FALLBACK ONLY. Not the recommended path.
+# -----------------------------------------------------------------------------
+# READ THIS BEFORE ENABLING IT
+#
+# The recommended way to deploy Job Paglu is Vercel's **Git integration**:
+# connect the GitHub repository once in the Vercel dashboard, and every push
+# deploys. Two projects, one repository, different Root Directories:
+#
+#     job-paglu-web   Root Directory: frontend   -> home.jobpaglu.eu.cc
+#     job-paglu-api   Root Directory: backend    -> an internal *.vercel.app URL
+#
+# Why that is better than this file, and it is not a matter of taste:
+#
+#   * NO CREDENTIAL EXISTS. There is no API token to create, store, rotate,
+#     paste, or leak. This project has already had two API tokens disclosed into
+#     a chat transcript. A deploy mechanism that needs no token cannot repeat
+#     that failure — not "is unlikely to", cannot.
+#   * Vercel builds it, so the build environment is the one the platform
+#     supports, not a runner you keep in sync by hand.
+#   * Preview deployments, instant rollback and per-branch environments all come
+#     for free and are wired to the same commits.
+#
+# The only honest reason to use this workflow is that Git integration is
+# genuinely unavailable to you — an organisation policy that forbids the GitHub
+# App, or a repository the App cannot be installed on. If that is not your
+# situation, delete this file rather than leaving a live deploy credential
+# configured for a mechanism you are not using.
+#
+# CI IS NOT A GATE ON VERCEL, EITHER WAY
+#   Vercel's Git integration builds on push, independently of GitHub Actions. A
+#   red CI run does not by itself stop a deploy. To make "deploy only after
+#   checks pass" true, use Vercel's **Ignored Build Step** or require checks on
+#   the branch. See docs/DEPLOYMENT.md.
+#
+# WHAT YOU MUST CONFIGURE IF YOU DO USE THIS
+#   Settings -> Secrets and variables -> Actions
+#
+#   Secrets:
+#     VERCEL_TOKEN        A Vercel access token. This is the credential the
+#                         recommended path does not need. Scope it to the one
+#                         team that owns these projects, give it the shortest
+#                         expiry you will tolerate, and delete it the day you
+#                         switch to Git integration.
+#   Variables:
+#     VERCEL_ORG_ID       Identifier, not a secret.
+#     VERCEL_PROJECT_ID   Identifier, not a secret. The **frontend** project's.
+#
+# HONEST STATUS: never executed. Written from the documented Vercel CLI
+# interface. The environment variables the build needs are pulled from the
+# Vercel project by `vercel pull`, so they are configured in one place (the
+# dashboard) rather than duplicated here — which is also why this file sets no
+# SITE_URL or API_BASE_URL of its own.
+# =============================================================================
+
+name: Deploy frontend (manual fallback)
+
+# Manual only, deliberately. A push trigger here would race Vercel's own Git
+# integration and deploy the same commit twice from two build environments.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Which Vercel environment to deploy"
+        type: choice
+        options: [preview, production]
+        default: preview
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      # Fail before installing anything, with an explanation that points at the
+      # better option rather than just naming a missing secret.
+      - name: Require the deploy credential, and say why it should not exist
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+        run: |
+          missing=""
+          [ -z "$VERCEL_TOKEN" ]      && missing="$missing VERCEL_TOKEN(secret)"
+          [ -z "$VERCEL_ORG_ID" ]     && missing="$missing VERCEL_ORG_ID(variable)"
+          [ -z "$VERCEL_PROJECT_ID" ] && missing="$missing VERCEL_PROJECT_ID(variable)"
+          if [ -n "$missing" ]; then
+            echo "::error title=Token-based deploy is not configured::Missing:$missing. This workflow is the FALLBACK path. The recommended path is Vercel's Git integration, which needs no token at all - connect the repository in the Vercel dashboard and every push deploys. Configure these only if Git integration is genuinely unavailable to you. See docs/DEPLOYMENT.md."
+            exit 1
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # `vercel pull` writes the project's environment variables and settings
+      # into .vercel/ so the local build matches what the platform would do.
+      # This is what keeps the two paths from producing different artefacts:
+      # the values come from the dashboard either way.
+      - name: Pull the Vercel project configuration
+        working-directory: frontend
+        env:
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+        run: |
+          if [ "${{ inputs.environment }}" = "production" ]; then TARGET=production; else TARGET=preview; fi
+          npx --yes vercel@latest pull --yes --environment="$TARGET" --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Build
+        working-directory: frontend
+        env:
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+        run: |
+          if [ "${{ inputs.environment }}" = "production" ]; then PROD=--prod; else PROD=; fi
+          npx --yes vercel@latest build $PROD --token="${{ secrets.VERCEL_TOKEN }}"
+
+      # --prebuilt uploads the artefact this job just produced instead of asking
+      # Vercel to rebuild from source. Without it the platform would build again
+      # and this job's build would have verified nothing.
+      - name: Deploy the prebuilt output
+        working-directory: frontend
+        env:
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+        run: |
+          if [ "${{ inputs.environment }}" = "production" ]; then PROD=--prod; else PROD=; fi
+          npx --yes vercel@latest deploy --prebuilt $PROD --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Next steps
+        if: always()
+        run: |
+          {
+            echo "## Deployed via the fallback path"
+            echo
+            echo "This used a \`VERCEL_TOKEN\`. The recommended path needs none."
+            echo "If Git integration is available to you, connect the repository"
+            echo "in the Vercel dashboard, delete the token, and delete this"
+            echo "workflow."
+            echo
+            echo "Verify the chain, not just that the page loads:"
+            echo
+            echo '```bash'
+            echo 'curl -sI https://home.jobpaglu.eu.cc | head -1'
+            echo 'curl -s  https://home.jobpaglu.eu.cc/api/jobs | head -c 200'
+            echo '```'
+            echo
+            echo "The second command is the one that matters: it proves the"
+            echo "\`/api/*\` rewrite reaches the Go API project. If it fails while"
+            echo "the page loads, the frontend is fine and the rewrite"
+            echo "destination in \`frontend/vercel.json\` is not."
+          } >> "$GITHUB_STEP_SUMMARY"

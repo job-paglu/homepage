@@ -1,0 +1,131 @@
+# =============================================================================
+# Job Paglu - CodeQL static analysis
+# -----------------------------------------------------------------------------
+# WHY THIS EXISTS AS A SEPARATE WORKFLOW FROM ci.yml
+#
+# ci.yml's `security` job answers "are any of our dependencies known to be
+# vulnerable?" (govulncheck, npm audit) and "did we commit a secret?"
+# (gitleaks). None of those look at what OUR OWN code does.
+#
+# CodeQL does. It builds a dataflow graph and tracks tainted values from a
+# source (an HTTP request) to a sink (a SQL query, an HTML sink, an outbound
+# URL). That is directly aimed at the three controls this project implements by
+# hand and therefore has to get right by hand:
+#
+#   * SQL injection    - hand-written SQL with $n placeholders and no ORM
+#                        (decision D-6). CodeQL flags the day someone
+#                        concatenates a filter value into a query string.
+#   * XSS              - job description rendered as text, never set:html.
+#   * unsafe outbound  - apply_url is validated on write and re-checked on
+#     redirect / URL   render; CodeQL's url-redirection queries cover the path
+#                        where a stored value reaches an href.
+#
+# It is a separate workflow because it is slower than ci.yml, runs on a schedule
+# as well as on pull requests, and needs a permission (`security-events: write`)
+# that ci.yml deliberately does not have.
+#
+# -----------------------------------------------------------------------------
+# BEFORE YOU RELY ON THIS - two conditions, both outside this file:
+#
+#   1. LICENSING. CodeQL is free on PUBLIC repositories. On a PRIVATE or
+#      internal repository it requires GitHub Advanced Security, and without it
+#      every run fails at the `init` step with an entitlement error. If
+#      `github.com/job-paglu/homepage` is private and GHAS is not enabled,
+#      DELETE THIS FILE rather than leaving a permanently red check - a security
+#      workflow that always fails trains people to ignore security workflows.
+#
+#   2. BOOTSTRAP. The Go analysis compiles the module, so `backend/go.sum` must
+#      be committed (`go mod tidy`), and the JavaScript/TypeScript analysis
+#      wants `frontend/package-lock.json` (`npm install`). Same prerequisite as
+#      ci.yml; see scripts/README.md.
+#
+# HONEST STATUS: never executed. Written from the documented behaviour of
+# github/codeql-action v3, not from a green run.
+# =============================================================================
+
+name: CodeQL
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    # Weekly, Monday 04:17 UTC. A schedule matters because CodeQL's query packs
+    # are updated continuously: a finding that did not exist when the code was
+    # merged can appear later without a single line changing. The odd minute is
+    # to avoid the top-of-hour stampede on GitHub's scheduler.
+    - cron: "17 4 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      # Required to upload the SARIF results to the repository's Security tab.
+      # Scoped to this job only, which is the whole reason CodeQL does not live
+      # in ci.yml.
+      security-events: write
+      contents: read
+      # Needed only so CodeQL can annotate pull requests from forks.
+      actions: read
+
+    strategy:
+      # One language failing must not cancel the other's analysis.
+      fail-fast: false
+      matrix:
+        include:
+          - language: go
+            build-mode: autobuild
+          - language: javascript-typescript
+            # No compilation step: CodeQL parses the sources directly. This also
+            # covers .astro files' embedded <script> blocks and the .tsx admin
+            # island.
+            build-mode: none
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # setup-go before init so autobuild uses the pinned toolchain rather than
+      # whatever version the runner image happens to ship.
+      - name: Set up Go
+        if: matrix.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          # security-and-quality is a superset of the default `security-extended`
+          # pack: it adds maintainability queries. Chosen because this codebase
+          # is small enough that the extra findings are readable rather than a
+          # flood. Drop to `security-extended` if the noise ever outweighs it.
+          queries: security-and-quality
+
+      # autobuild for Go finds the module and runs `go build ./...`. It is left
+      # in place rather than replaced with an explicit build command because
+      # `backend/` is a single ordinary module with no code generation step - the
+      # case autobuild handles correctly. If a generate step is ever added, swap
+      # this for an explicit `run:` block.
+      - name: Autobuild
+        if: matrix.build-mode == 'autobuild'
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

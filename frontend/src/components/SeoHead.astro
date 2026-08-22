@@ -1,0 +1,61 @@
+---
+/**
+ * Every `<head>` tag that search engines and social crawlers read.
+ *
+ * Centralised so a page cannot ship a canonical without an Open Graph URL, or a
+ * title without a description. Callers pass an absolute `canonical`; relative
+ * canonicals and relative `og:url` are silently ignored by most crawlers, which
+ * is the worst kind of bug — invisible in the browser, fatal in the index.
+ */
+import { serialiseJsonLd } from '@lib/seo';
+import { copy } from '@lib/copy';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Absolute URL. Built with `absoluteUrl`/`canonicalUrl` from @lib/urls. */
+  canonical: string;
+  ogType?: 'website' | 'article';
+  /** Absolute URL of a share image. Omitted entirely when absent. */
+  ogImage?: string | undefined;
+  noindex?: boolean;
+  /**
+   * A JSON-LD node (an object, not a string). Serialised here through
+   * `serialiseJsonLd`, which escapes every character that could terminate the
+   * script element — a job description containing `</script>` must not be able
+   * to break out.
+   */
+  jsonLd?: unknown;
+}
+
+const { title, description, canonical, ogType = 'website', ogImage, noindex = false, jsonLd } =
+  Astro.props;
+
+const ldJson = jsonLd === undefined ? null : serialiseJsonLd(jsonLd);
+---
+
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+
+{/* Applied to /admin and to the 404 page: neither should ever be indexed. */}
+{noindex && <meta name="robots" content="noindex, nofollow" />}
+
+<meta property="og:site_name" content={copy.site.name} />
+<meta property="og:locale" content={copy.site.ogLocale} />
+<meta property="og:type" content={ogType} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+{ogImage && <meta property="og:image" content={ogImage} />}
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+{ogImage && <meta name="twitter:image" content={ogImage} />}
+
+{
+  ldJson !== null && (
+    <script type="application/ld+json" is:inline set:html={ldJson} />
+  )
+}

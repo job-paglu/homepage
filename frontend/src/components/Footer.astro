@@ -1,0 +1,78 @@
+---
+/**
+ * Site footer.
+ *
+ * Also the no-JavaScript fallback for mobile navigation, which is why its links
+ * carry the same 44px touch floor as the menu panel rather than being the usual
+ * cramped 13px legal row.
+ *
+ * The year is computed at render time. These pages are SSR'd or prerendered, so
+ * a prerendered page's year is fixed at build time — acceptable, and far better
+ * than shipping a script to update a single number.
+ */
+import Logo from '@components/Logo.astro';
+import styles from '@styles/footer.module.css';
+import { copy } from '@lib/copy';
+import { ROUTES } from '@lib/urls';
+
+const year = new Date().getUTCFullYear();
+
+const explore = [
+  { href: ROUTES.home, label: copy.nav.home },
+  { href: ROUTES.jobs, label: copy.nav.jobs },
+] as const;
+
+const legal = [
+  { href: ROUTES.privacy, label: copy.nav.privacy },
+  { href: ROUTES.terms, label: copy.nav.terms },
+] as const;
+---
+
+<footer class={styles.footer}>
+  <div class:list={['jp-container', styles.inner]}>
+    <div class={styles.about}>
+      <Logo inverse />
+      <p class={styles.blurb}>{copy.footer.blurb}</p>
+      {/* Amber background carrying --jp-ink: the only sanctioned use of the
+          accent token (tokens.css contrast notes). */}
+      <p class={styles.notice}>{copy.footer.freeNotice}</p>
+    </div>
+
+    <nav class={styles.group} aria-label={copy.footer.exploreHeading}>
+      <h2 class={styles.groupTitle}>{copy.footer.exploreHeading}</h2>
+      <ul class={styles.list}>
+        {
+          explore.map((link) => (
+            <li>
+              <a class={styles.link} href={link.href}>
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <nav class={styles.group} aria-label={copy.footer.legalHeading}>
+      <h2 class={styles.groupTitle}>{copy.footer.legalHeading}</h2>
+      <ul class={styles.list}>
+        {
+          legal.map((link) => (
+            <li>
+              <a class={styles.link} href={link.href}>
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+  </div>
+
+  <div class="jp-container">
+    <div class={styles.bottom}>
+      <p>{`${copy.footer.copyrightPrefix} ${year} ${copy.footer.copyrightSuffix}`}</p>
+      <p class={styles.tagline}>{copy.site.tagline}</p>
+    </div>
+  </div>
+</footer>

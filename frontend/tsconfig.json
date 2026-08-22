@@ -1,0 +1,27 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "verbatimModuleSyntax": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@components/*": ["src/components/*"],
+      "@layouts/*": ["src/layouts/*"],
+      "@lib/*": ["src/lib/*"],
+      "@styles/*": ["src/styles/*"]
+    },
+    // "node" is required because astro.config.mjs reads `process.env.SITE_URL`
+    // at config-evaluation time, which runs in Node rather than in the Vite
+    // client environment. Without it `astro check` reports
+    // `ts(2591): Cannot find name 'process'` -- the only error the first real
+    // typecheck of this project produced (2026-08-22 EC2 run, T-6).
+    "types": ["astro/client", "node"]
+  },
+  "include": ["src/**/*", "astro.config.mjs", ".astro/types.d.ts"],
+  "exclude": ["dist", "node_modules", ".astro"]
+}

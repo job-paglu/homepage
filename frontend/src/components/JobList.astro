@@ -1,0 +1,37 @@
+---
+/**
+ * The job grid.
+ *
+ * A real `<ul>` rather than a bare stack of `<article>`s: a screen reader then
+ * announces "list, 12 items", which is the single most useful thing to know
+ * before deciding whether to read on.
+ */
+import JobCard from '@components/JobCard.astro';
+import styles from '@styles/jobList.module.css';
+import type { JobSummary } from '@lib/types';
+
+interface Props {
+  jobs: JobSummary[];
+  /** Heading level for each card's title. Must not skip a level on the page. */
+  headingLevel?: 2 | 3 | 4;
+  /** Names the list when it is not already described by a visible heading. */
+  label?: string | undefined;
+  labelledBy?: string | undefined;
+}
+
+const { jobs, headingLevel = 3, label, labelledBy } = Astro.props;
+---
+
+<ul
+  class={styles.list}
+  aria-label={labelledBy === undefined ? label : undefined}
+  aria-labelledby={labelledBy}
+>
+  {
+    jobs.map((job) => (
+      <li class={styles.item}>
+        <JobCard job={job} headingLevel={headingLevel} />
+      </li>
+    ))
+  }
+</ul>

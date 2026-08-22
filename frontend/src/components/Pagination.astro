@@ -1,0 +1,126 @@
+---
+/**
+ * Page links for the job list. Zero JavaScript: every page is a real URL, so it
+ * is crawlable, shareable, and works with the back button for free.
+ *
+ * Rendered inside a `<nav>` with an accessible name because a page can contain
+ * more than one navigation landmark, and "navigation" repeated three times in a
+ * landmark list tells a screen-reader user nothing.
+ */
+import styles from '@styles/pagination.module.css';
+import { copy } from '@lib/copy';
+import { jobListPath } from '@lib/urls';
+
+interface Props {
+  page: number;
+  totalPages: number;
+}
+
+const { page, totalPages } = Astro.props;
+
+/**
+ * First, last, and the current page with one neighbour either side. Anything
+ * more needs a scrollable row on a 320px screen, which is worse than an
+ * ellipsis. A `Set` de-duplicates the overlaps near the ends without any
+ * special-casing.
+ */
+function pageWindow(current: number, total: number): Array<number | 'gap'> {
+  const wanted = [1, total, current - 1, current, current + 1];
+  const unique = [...new Set(wanted)].filter((n) => n >= 1 && n <= total).sort((a, b) => a - b);
+
+  const items: Array<number | 'gap'> = [];
+  let previous = 0;
+  for (const n of unique) {
+    if (previous !== 0 && n - previous > 1) items.push('gap');
+    items.push(n);
+    previous = n;
+  }
+  return items;
+}
+
+const items = totalPages > 1 ? pageWindow(page, totalPages) : [];
+const hasPrevious = page > 1;
+const hasNext = page < totalPages;
+---
+
+{
+  totalPages > 1 && (
+    <nav class={styles.nav} aria-label={copy.pagination.label}>
+      <ul class={styles.list}>
+        <li>
+          {hasPrevious ? (
+            /* aria-label rather than a visually-hidden twin of the visible
+               word: with both, a screen reader announces "Previous Previous"
+               at widths where the label is shown. */
+            <a
+              class={styles.link}
+              href={jobListPath(page - 1)}
+              rel="prev"
+              aria-label={copy.pagination.previous}
+            >
+              <span aria-hidden="true">&#8592;</span>
+              <span class={styles.edgeLabel} aria-hidden="true">&nbsp;{copy.pagination.previous}</span>
+            </a>
+          ) : (
+            /* A <span>, not a disabled link: there is no page 0, so there is no
+               href, so there is nothing to focus and nothing to mislead. */
+            <span class={styles.disabled} aria-hidden="true">
+              <span>&#8592;</span>
+              <span class={styles.edgeLabel}>&nbsp;{copy.pagination.previous}</span>
+            </span>
+          )}
+        </li>
+
+        {items.map((item) =>
+          item === 'gap' ? (
+            <li class={styles.ellipsis} aria-hidden="true">
+              &#8230;
+            </li>
+          ) : item === page ? (
+            <li>
+              <span class={styles.current} aria-current="page">
+                <span class="jp-visually-hidden">
+                  {`${copy.pagination.pagePrefix} ${item}, ${copy.pagination.currentSuffix}`}
+                </span>
+                <span aria-hidden="true">{item}</span>
+              </span>
+            </li>
+          ) : (
+            <li>
+              <a
+                class={styles.link}
+                href={jobListPath(item)}
+                aria-label={`${copy.pagination.pagePrefix} ${item}`}
+              >
+                <span aria-hidden="true">{item}</span>
+              </a>
+            </li>
+          ),
+        )}
+
+        <li>
+          {hasNext ? (
+            <a
+              class={styles.link}
+              href={jobListPath(page + 1)}
+              rel="next"
+              aria-label={copy.pagination.next}
+            >
+              <span class={styles.edgeLabel} aria-hidden="true">{copy.pagination.next}&nbsp;</span>
+              <span aria-hidden="true">&#8594;</span>
+            </a>
+          ) : (
+            <span class={styles.disabled} aria-hidden="true">
+              <span class={styles.edgeLabel}>{copy.pagination.next}&nbsp;</span>
+              <span>&#8594;</span>
+            </span>
+          )}
+        </li>
+      </ul>
+
+      <p class={styles.summary}>
+        {`${copy.jobsIndex.pageOf} ${page} ${copy.jobsIndex.pageOfJoin} ${totalPages}`}
+      </p>
+    </nav>
+  )
+}

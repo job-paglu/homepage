@@ -1,0 +1,178 @@
+---
+/**
+ * The free-service announcement (request sections 13 and 41).
+ *
+ * Shown once, ~2.5s after the first visit, and never again once dismissed.
+ *
+ * Two design decisions worth defending:
+ *
+ * 1. **Hidden in the HTML, revealed by script.** This is the reverse of the
+ *    usual "render open, hide with CSS" pattern, and it is deliberate: if the
+ *    script throws, the visitor gets a page with no announcement rather than an
+ *    overlay with no way to dismiss it. A broken popup must fail closed.
+ *
+ * 2. **A hand-built dialog rather than `<dialog>`.** `showModal()` would give
+ *    the focus trap and Escape handling for free, but its `::backdrop` cannot be
+ *    dismissed by a click without a script anyway, and the top-layer promotion
+ *    interacts badly with the sticky header on iOS Safari. The trap below is
+ *    ~15 lines and is fully under our control.
+ *
+ * Dismissal is stored under a **versioned** key. Revising the copy means
+ * bumping `v1` to `v2`, which shows the new notice to everybody exactly once —
+ * a non-versioned key would silently hide a materially different message from
+ * every returning visitor.
+ */
+import styles from '@styles/freeServicePopup.module.css';
+import { copy } from '@lib/copy';
+
+const headingId = 'jp-popup-heading';
+const bodyId = 'jp-popup-body';
+/** Bump the version when the wording changes. See the note above. */
+const storageKey = 'jp.popup.free-service.v1';
+const delayMs = 2500;
+---
+
+<div class={styles.root} data-jp-popup data-storage-key={storageKey} data-delay={String(delayMs)} hidden>
+  <div class={styles.backdrop} data-jp-popup-dismiss></div>
+
+  <div
+    class={styles.dialog}
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby={headingId}
+    aria-describedby={bodyId}
+    tabindex="-1"
+    data-jp-popup-dialog
+  >
+    <p class={styles.eyebrow}>{copy.popup.eyebrow}</p>
+    <h2 class={styles.heading} id={headingId}>{copy.popup.heading}</h2>
+    <p class={styles.body} id={bodyId}>{copy.popup.body}</p>
+    <div class={styles.actions}>
+      <button
+        type="button"
+        class={styles.close}
+        aria-label={copy.popup.closeLabel}
+        data-jp-popup-dismiss
+        data-jp-popup-primary
+      >
+        {copy.popup.close}
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-jp-popup]');
+  const dialog = root?.querySelector<HTMLElement>('[data-jp-popup-dialog]') ?? null;
+
+  if (root && dialog) {
+    const key = root.dataset.storageKey ?? 'jp.popup.free-service.v1';
+    const delay = Number(root.dataset.delay ?? '2500');
+    // Two stores, two questions. localStorage answers "has this visitor ever
+    // dismissed it?"; sessionStorage answers "has it already been shown during
+    // this visit?" — without the second, navigating before dismissing would
+    // re-open it on every page.
+    const sessionKey = `${key}.shown`;
+
+    // Safari in private mode throws on access, not just on write. Every call is
+    // wrapped, and a storage failure degrades to "show it, do not remember" —
+    // annoying at worst, never broken.
+    const read = (store: Storage | undefined, name: string): string | null => {
+      try {
+        return store?.getItem(name) ?? null;
+      } catch {
+        return null;
+      }
+    };
+    const write = (store: Storage | undefined, name: string, value: string): void => {
+      try {
+        store?.setItem(name, value);
+      } catch {
+        /* Private mode, or a full quota. Not worth telling the visitor about. */
+      }
+    };
+
+    const local = (() => {
+      try {
+        return window.localStorage;
+      } catch {
+        return undefined;
+      }
+    })();
+    const session = (() => {
+      try {
+        return window.sessionStorage;
+      } catch {
+        return undefined;
+      }
+    })();
+
+    let previouslyFocused: HTMLElement | null = null;
+
+    const focusable = (): HTMLElement[] =>
+      Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+
+    const onKeydown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      // Focus trap: wrap at both ends so Tab can never reach the page behind an
+      // aria-modal dialog, which would otherwise be reachable and confusing.
+      const items = focusable();
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (!first || !last) {
+        event.preventDefault();
+        return;
+      }
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !dialog.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    function open(): void {
+      previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      root!.hidden = false;
+      // Own attribute, not a shared flag: the mobile menu uses a different one,
+      // so closing this cannot unlock scrolling underneath an open menu.
+      document.documentElement.toggleAttribute('data-jp-popup-open', true);
+      document.addEventListener('keydown', onKeydown, true);
+      (dialog!.querySelector<HTMLElement>('[data-jp-popup-primary]') ?? dialog!).focus();
+      write(session, sessionKey, '1');
+    }
+
+    function close(): void {
+      root!.hidden = true;
+      document.documentElement.toggleAttribute('data-jp-popup-open', false);
+      document.removeEventListener('keydown', onKeydown, true);
+      write(local, key, new Date().toISOString());
+      // Restore focus to whatever the visitor was on before the dialog stole
+      // it. Without this, focus falls back to <body> and the next Tab starts
+      // the page over from the skip link.
+      previouslyFocused?.focus();
+    }
+
+    root.querySelectorAll<HTMLElement>('[data-jp-popup-dismiss]').forEach((element) => {
+      element.addEventListener('click', close);
+    });
+
+    const alreadyDismissed = read(local, key) !== null;
+    const alreadyShown = read(session, sessionKey) !== null;
+    if (!alreadyDismissed && !alreadyShown) {
+      window.setTimeout(open, Number.isFinite(delay) ? delay : 2500);
+    }
+  }
+</script>

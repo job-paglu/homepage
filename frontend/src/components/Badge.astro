@@ -1,0 +1,26 @@
+---
+/**
+ * Small status pill.
+ *
+ * The `featured` tone puts --jp-ink on the amber background (9.1:1). Amber is a
+ * background token and must never colour text — see the contrast notes at the
+ * top of tokens.css. The label is always a word, never a bare colour or dot, so
+ * the state does not depend on colour perception (WCAG 1.4.1).
+ */
+import styles from '@styles/badge.module.css';
+
+interface Props {
+  label: string;
+  tone?: 'featured' | 'brand' | 'neutral';
+  /** Decorative dot before the word. Never a replacement for it. */
+  withDot?: boolean;
+  class?: string | undefined;
+}
+
+const { label, tone = 'neutral', withDot = false, class: className } = Astro.props;
+---
+
+<span class:list={[styles.badge, styles[tone], className]}>
+  {withDot && <span class={styles.dot} aria-hidden="true"></span>}
+  {label}
+</span>

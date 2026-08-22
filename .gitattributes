@@ -1,0 +1,132 @@
+# =============================================================================
+# Job Paglu - git attributes
+# -----------------------------------------------------------------------------
+# Purpose: normalise line endings in the repository and stop git from trying to
+# diff or merge binary files as text.
+#
+# This file governs what git STORES and checks out. `.editorconfig` governs what
+# an editor WRITES. They are aligned on purpose, including the single exception
+# (`*.ps1` is CRLF in both). Changing one without the other produces a file that
+# git normalises on checkout and the editor re-dirties on save, forever.
+#
+# `text=auto eol=lf` means: git decides text-vs-binary by content, and every
+# file it decides is text is stored with LF in the object database AND checked
+# out with LF, on every platform. That is stronger than relying on each
+# developer's core.autocrlf, which is a machine setting and therefore not
+# portable - exactly the property this repository needs (rule R11).
+#
+# After changing this file, existing checkouts need:
+#     git add --renormalize .
+# or the old line endings persist in the index.
+# =============================================================================
+
+# --- Default: everything textual is LF ---------------------------------------
+* text=auto eol=lf
+
+
+# --- Source and config: explicitly text, explicitly LF -----------------------
+# Named rather than left to `auto` so a file that happens to begin with an
+# unusual byte sequence is never misclassified as binary.
+*.astro     text eol=lf
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.mts       text eol=lf
+*.cts       text eol=lf
+*.js        text eol=lf
+*.mjs       text eol=lf
+*.cjs       text eol=lf
+*.jsx       text eol=lf
+*.json      text eol=lf
+*.jsonc     text eol=lf
+*.css       text eol=lf
+*.scss      text eol=lf
+*.html      text eol=lf
+*.svg       text eol=lf
+*.xml       text eol=lf
+*.md        text eol=lf
+*.txt       text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.toml      text eol=lf
+*.sql       text eol=lf
+*.go        text eol=lf
+go.mod      text eol=lf
+go.sum      text eol=lf
+Dockerfile* text eol=lf
+.env.example        text eol=lf
+.dockerignore       text eol=lf
+.gitignore          text eol=lf
+.gitattributes      text eol=lf
+.editorconfig       text eol=lf
+
+# --- Shell scripts: LF is a correctness requirement --------------------------
+# A CRLF after `#!/usr/bin/env bash` makes the kernel look for an interpreter
+# named `bash\r` and the script fails with "bad interpreter". Also applies to
+# anything COPYed into a Linux container image.
+*.sh        text eol=lf
+*.bash      text eol=lf
+
+# --- PowerShell: CRLF, deliberately ------------------------------------------
+# The only exception to the LF rule. Windows PowerShell 5.1 is the primary shell
+# on the authoring machine; CRLF avoids ISE/editor churn and here-string edge
+# cases. pwsh on Linux reads LF and CRLF alike, so nothing is lost.
+*.ps1       text eol=crlf
+*.psm1      text eol=crlf
+*.psd1      text eol=crlf
+
+# --- Windows batch: CRLF is required -----------------------------------------
+# cmd.exe mis-parses LF-only batch files (notably around `goto` and labels).
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+
+
+# --- Binary: never diff, never merge, never normalise ------------------------
+# Without these, a checkout can corrupt a file by "fixing" its line endings.
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.webp      binary
+*.avif      binary
+*.ico       binary
+*.pdf       binary
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.otf       binary
+*.eot       binary
+*.zip       binary
+*.gz        binary
+*.tgz       binary
+*.bz2       binary
+*.xz        binary
+*.7z        binary
+*.mp4       binary
+*.webm      binary
+*.wasm      binary
+*.dump      binary
+*.exe       binary
+*.dll       binary
+*.so        binary
+*.dylib     binary
+# NOTE: *.svg is text (it is XML) and is listed above, not here. Marking it
+# binary would lose diffs on the favicon and on any future inline icon.
+
+
+# --- Diff behaviour ----------------------------------------------------------
+# Better hunk headers when reviewing Go and CSS.
+*.go        diff=golang
+*.css       diff=css
+*.html      diff=html
+
+
+# --- Generated files ---------------------------------------------------------
+# `linguist-generated` collapses these in GitHub pull-request diffs so a
+# lockfile bump does not bury the change a reviewer actually needs to read.
+# They are still committed and still reviewable by expanding the diff.
+package-lock.json   linguist-generated=true -diff
+go.sum              linguist-generated=true -diff
+
+# Keep the repository's language statistics meaningful.
+docs/**             linguist-documentation=true
+scripts/**          linguist-vendored=false

@@ -1,0 +1,49 @@
+---
+/**
+ * Skeleton placeholder, shape-matched to JobCard.
+ *
+ * NOTE ON WHY THIS IS NOT RENDERED BY THE PUBLIC PAGES.
+ *
+ * `/`, `/jobs` and `/jobs/[slug]` are server-rendered: the HTML does not exist
+ * until the API call has already resolved, so on first paint there is no moment
+ * at which a visitor could see a loading state. Shipping a spinner into those
+ * pages would mean shipping markup that is unreachable by construction, plus
+ * the JavaScript to hide it.
+ *
+ * It is kept and exported because it *is* reachable in two cases that are
+ * genuinely coming: a client-side navigation (if view transitions are enabled
+ * later, the outgoing page shows this while the next document is fetched), and
+ * the admin dashboard's client-rendered job list. Deleting it and rewriting it
+ * later would lose the shape match with JobCard, which is the only hard part.
+ *
+ * `aria-busy` + a visually-hidden label, so the wait is announced rather than
+ * being a silent block of grey rectangles.
+ */
+import styles from '@styles/states.module.css';
+import { copy } from '@lib/copy';
+
+interface Props {
+  /** How many placeholder cards. Match the expected page size, not more. */
+  count?: number;
+  label?: string;
+}
+
+const { count = 4, label = copy.states.loadingLabel } = Astro.props;
+const cards = Array.from({ length: Math.max(1, count) });
+---
+
+<div role="status" aria-busy="true" aria-live="polite">
+  <span class="jp-visually-hidden">{label}</span>
+  <ul class={styles.skeletonList}>
+    {
+      cards.map(() => (
+        <li class={styles.skeletonCard} aria-hidden="true">
+          <div class:list={[styles.bar, styles.barTitle]}></div>
+          <div class:list={[styles.bar, styles.barShort]}></div>
+          <div class:list={[styles.bar, styles.barMedium]}></div>
+          <div class:list={[styles.bar, styles.barShort]}></div>
+        </li>
+      ))
+    }
+  </ul>
+</div>

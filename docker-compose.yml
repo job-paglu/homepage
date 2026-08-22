@@ -1,0 +1,211 @@
+# =============================================================================
+# Job Paglu - LOCAL DEVELOPMENT ONLY
+# -----------------------------------------------------------------------------
+# THIS FILE IS NOT THE PRODUCTION ARCHITECTURE AND MUST NOT BE DEPLOYED.
+#
+# Production (decisions D-10, D-11, D-12) is:
+#     frontend  -> Vercel project job-paglu-web (Astro, no container at all)
+#     backend   -> Vercel project job-paglu-api (Go runtime, no container either)
+#     database  -> Neon serverless PostgreSQL, TLS required
+#
+# Compose exists for exactly one reason: so a developer gets a real PostgreSQL
+# 17 and, optionally, the whole stack, from one command - instead of installing
+# and configuring Postgres on their machine. Nothing here is hardened, nothing
+# here holds a production secret, and no service declares a restart policy,
+# because a dev stack should stop when you stop it and stay stopped.
+#
+#   docker compose up -d db                  # database only  <-- the normal case
+#   docker compose up -d db backend          # database + Go API
+#   docker compose --profile full up -d      # + the Astro dev server (see below)
+#   docker compose down                      # stop, keep the data volume
+#   docker compose down -v                   # stop and DESTROY the data volume
+#
+# Values come from `.env` in this directory (Compose reads it automatically for
+# interpolation). Every one has a local-only default, so the stack starts before
+# you have written a `.env` at all. See .env.example.
+#
+# Schema: modern Compose Specification. There is deliberately no top-level
+# `version:` key - it has been obsolete since Compose v2 and current versions
+# print a warning if it is present.
+# =============================================================================
+
+name: job-paglu
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 17 - the only service most days need.
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:17-alpine
+    container_name: jp-db
+    # Alpine keeps the image small; the server is identical to the Debian build.
+    # 17 matches Neon's major version so a migration that works locally is not
+    # a surprise in production.
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jobpaglu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jobpaglu_local_only}
+      POSTGRES_DB: ${POSTGRES_DB:-jobpaglu}
+      # UTF8 + C collation: deterministic sort order, so an ORDER BY that passes
+      # locally cannot reorder itself on a differently-localed machine.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+      # Require a password even on the container's own network. `trust` is the
+      # tempting shortcut and it means any process that can reach port 5432 is
+      # superuser - including anything else on your machine, since the port is
+      # published below.
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    ports:
+      # Published so the backend can run on the HOST (the normal workflow) and
+      # so you can attach psql / a GUI client. Change POSTGRES_PORT in .env if
+      # something already owns 5432 on your machine.
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # A NAMED volume, not a bind mount. A bind mount of PGDATA onto a Windows
+      # or macOS filesystem is slow and, for Postgres specifically, can fail
+      # outright on permissions and fsync semantics.
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      # `pg_isready` is the only correct readiness signal here: the container is
+      # "running" long before initdb has finished, and a backend that connects
+      # in that window dies on startup. Everything else depends on this.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jobpaglu} -d ${POSTGRES_DB:-jobpaglu} -q"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    # No `restart:` - see the header. Deliberate.
+
+  # ---------------------------------------------------------------------------
+  # Go API.
+  # ---------------------------------------------------------------------------
+  # NOTE ON OWNERSHIP: `backend/Dockerfile` and `backend/.dockerignore` are
+  # owned by the backend side of the repository, not by this file. This service
+  # only consumes them. If the build fails, the fix belongs there. The same
+  # image is no longer a production artefact (DECISIONS D-20), so a `docker compose build
+  # backend` that succeeds is also a useful pre-deploy check.
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jp-backend
+    depends_on:
+      db:
+        # Wait for the healthcheck above, not merely for the container to exist.
+        # `service_started` would race initdb and fail intermittently, which is
+        # the worst kind of local-dev failure.
+        condition: service_healthy
+    environment:
+      # ---- Database ------------------------------------------------------
+      # DATABASE_URL is composed HERE from the POSTGRES_* values rather than
+      # interpolated from .env, and that is deliberate:
+      #
+      #   .env's DATABASE_URL points at localhost:5432, because the normal
+      #   workflow runs the backend on the host. Inside this network the
+      #   database is reachable as `db:5432` and `localhost` is the backend's
+      #   own container. Reading .env here would produce a connection refused
+      #   that looks like a Postgres fault and is really a networking mistake.
+      #
+      # sslmode=disable is correct for a container-to-container hop on a private
+      # Compose network and is NEVER correct for Neon, which requires
+      # sslmode=require. That difference lives in .env / the Vercel project config.
+      DATABASE_URL: postgres://${POSTGRES_USER:-jobpaglu}:${POSTGRES_PASSWORD:-jobpaglu_local_only}@db:5432/${POSTGRES_DB:-jobpaglu}?sslmode=disable
+      RUN_MIGRATIONS_ON_START: ${RUN_MIGRATIONS_ON_START:-true}
+
+      # ---- Application ---------------------------------------------------
+      APP_ENV: ${APP_ENV:-development}
+      PORT: "8080"
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+
+      # The origin the browser loads the site from. Drives the CORS allowlist
+      # and the Origin check on admin writes. Must match wherever the Astro dev
+      # server actually listens, or admin writes 403.
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4321}
+
+      # Stays false even locally unless you are deliberately testing an
+      # http-only apply URL. The apply URL goes straight into a visitor's
+      # browser; relaxing the allowlist by habit is how a bad link ships.
+      ALLOW_HTTP_APPLY_URLS: ${ALLOW_HTTP_APPLY_URLS:-false}
+
+      # Read from .env, with NO fallback value on purpose. A Compose default
+      # here would mean every developer's machine shared the same session
+      # secret, and that value would live in git.
+      #
+      # It is passed through empty rather than declared required with `:?`,
+      # because Compose interpolates this whole file before it selects which
+      # services to start - so `${ADMIN_SESSION_SECRET:?...}` would make even
+      # `docker compose up -d db` fail on a fresh clone. Instead the backend's
+      # own fail-fast config validation reports it, which is the right authority
+      # for "is this secret acceptable" anyway (it also checks the length).
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-}
+    ports:
+      - "${PORT:-8080}:8080"
+    # No `restart:`. If it crashes, you want to see the crash.
+
+  # ---------------------------------------------------------------------------
+  # Astro dev server - OPT-IN, behind the `full` profile.
+  # ---------------------------------------------------------------------------
+  # JUDGEMENT CALL, stated plainly so nobody has to guess:
+  #
+  #   Running `astro dev` on the HOST is the recommended workflow and is what
+  #   scripts/dev.* tells you to do. Running it in a container means the source
+  #   tree arrives over a bind mount, and on Windows and macOS bind-mount file
+  #   events are not delivered reliably to Linux inotify. The symptom is not a
+  #   crash - it is edits that sometimes do not trigger a reload, which is far
+  #   more expensive to debug than it is to avoid. Polling (set below) works
+  #   around it at the cost of constant CPU and a slower feedback loop.
+  #
+  #   So: this service is real, and gives "the whole stack in one command" for
+  #   the cases that genuinely want it - a machine with no Node installed, a
+  #   demo, or reproducing a Linux-only issue - but it is behind a profile so it
+  #   never starts by accident. `docker compose up -d` will not launch it.
+  #
+  #       docker compose --profile full up -d
+  #
+  #   There is no Dockerfile.frontend-dev: the official `node` image plus a
+  #   command is all a dev server needs, and an extra Dockerfile would be one
+  #   more file to keep in sync with frontend/package.json for no benefit.
+  frontend:
+    profiles: ["full"]
+    image: node:20-alpine
+    container_name: jp-frontend
+    working_dir: /app
+    depends_on:
+      - backend
+    # `npm install`, not `npm ci`: this is a throwaway dev container and the
+    # lockfile may legitimately not exist yet on a fresh clone. CI is where
+    # lockfile reproducibility is enforced (`npm ci` in .github/workflows/ci.yml)
+    # and that is the right place for it.
+    # `--host 0.0.0.0` is required - Astro binds to localhost by default, which
+    # inside a container is unreachable from your browser.
+    command: sh -lc "npm install --no-audit --no-fund && npm run dev -- --host 0.0.0.0 --port 4321"
+    environment:
+      # The BROWSER talks to the published host port...
+      PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-http://localhost:8080}
+      # ...while SSR inside this container reaches the backend by service name.
+      # This split is exactly why src/lib/api.ts has two base-URL variables.
+      API_BASE_URL: http://backend:8080
+      SITE_URL: ${SITE_URL:-http://localhost:4321}
+      APP_ENV: development
+      # Polling file-watcher. Required for edits on a Windows/macOS bind mount
+      # to be seen at all; the interval trades CPU for latency.
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "400"
+    ports:
+      - "4321:4321"
+    volumes:
+      - ./frontend:/app
+      # Anonymous-but-named volume for node_modules, mounted OVER the bind
+      # mount. Without it the container's Linux binaries (esbuild, rollup,
+      # sharp) would overwrite the host's, and the host's would then be wrong
+      # for the host - the classic "it works in Docker and now it is broken
+      # outside" failure.
+      - frontend-node-modules:/app/node_modules
+
+volumes:
+  db-data:
+    # Survives `docker compose down`. Destroy it with `docker compose down -v`
+    # when you want a genuinely empty database (e.g. to re-run migrations from
+    # scratch, or to clear seed data).
+    name: job-paglu-db-data
+  frontend-node-modules:
+    name: job-paglu-frontend-node-modules

@@ -1,0 +1,102 @@
+---
+/**
+ * The full job list. Server-rendered, edge-cached 60s (contract section 3).
+ *
+ * Reads D1 in-process through the job service rather than fetching `/api/jobs` —
+ * same Worker, so an HTTP hop would cost a subrequest and buy nothing. See
+ * `src/lib/publicJobs.ts`.
+ *
+ * Pagination is server-side and link-based, so page 2 is a real URL: crawlable,
+ * shareable, and back-button-correct with no JavaScript.
+ *
+ * The canonical for page N is page N's own URL, not page 1. Collapsing them
+ * would tell a search engine that twenty distinct jobs are duplicates of the
+ * first twenty.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import EmptyState from '@components/EmptyState.astro';
+import ErrorState from '@components/ErrorState.astro';
+import JobList from '@components/JobList.astro';
+import Pagination from '@components/Pagination.astro';
+import styles from '@styles/page.module.css';
+import { describeFailure, getRuntimeEnv, listPublishedJobs } from '@lib/publicJobs';
+import type { PageFailure } from '@lib/publicJobs';
+import { copy } from '@lib/copy';
+import { pageTitle } from '@lib/seo';
+import { absoluteUrl, jobListPath, readPageParam } from '@lib/urls';
+import type { JobSummary, Pagination as PaginationMeta } from '@lib/types';
+
+export const prerender = false;
+
+const PER_PAGE = 20;
+const HEADING_ID = 'jobs-heading';
+
+const page = readPageParam(Astro.url);
+
+let jobs: JobSummary[] = [];
+let meta: PaginationMeta = { page, per_page: PER_PAGE, total: 0, total_pages: 0 };
+let failure: PageFailure | null = null;
+
+try {
+  const env = getRuntimeEnv(Astro.locals);
+  const result = await listPublishedJobs(env, { page, per_page: PER_PAGE });
+  jobs = result.jobs;
+  meta = result.pagination;
+} catch (error) {
+  failure = describeFailure(error);
+}
+
+// Set after the query: an error state must not be cached for a minute. See the
+// same note in index.astro.
+Astro.response.headers.set(
+  'Cache-Control',
+  failure === null
+    ? 'public, max-age=0, s-maxage=60, stale-while-revalidate=300'
+    : 'no-store',
+);
+
+const selfPath = jobListPath(page);
+const countLabel = `${meta.total} ${meta.total === 1 ? copy.jobsIndex.countOne : copy.jobsIndex.countMany}`;
+
+// Page 2+ gets its own title so search results do not show twenty identical
+// entries for the same list.
+const title =
+  page > 1
+    ? `${copy.jobsIndex.metaTitle} — ${copy.jobsIndex.pageOf} ${page}`
+    : copy.jobsIndex.metaTitle;
+---
+
+<BaseLayout
+  title={pageTitle(title)}
+  description={copy.jobsIndex.metaDescription}
+  canonical={absoluteUrl(selfPath, Astro.site)}
+>
+  <section class={styles.section}>
+    <div class="jp-container">
+      <div class={styles.head}>
+        <div class={styles.headRow}>
+          <h1 class={styles.title} id={HEADING_ID}>{copy.jobsIndex.heading}</h1>
+          {failure === null && meta.total > 0 && <p class={styles.count}>{countLabel}</p>}
+        </div>
+        <p class={styles.support}>{copy.jobsIndex.support}</p>
+      </div>
+
+      {
+        failure !== null ? (
+          <ErrorState
+            message={failure.message}
+            retryable={failure.retryable}
+            retryHref={selfPath}
+          />
+        ) : jobs.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <>
+            <JobList jobs={jobs} headingLevel={2} labelledBy={HEADING_ID} />
+            <Pagination page={meta.page} totalPages={meta.total_pages} />
+          </>
+        )
+      }
+    </div>
+  </section>
+</BaseLayout>

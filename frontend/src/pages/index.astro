@@ -1,0 +1,103 @@
+---
+/**
+ * Home. Server-rendered so a job published in the admin dashboard is visible
+ * immediately, with no rebuild (DECISIONS D-2).
+ *
+ * **The data comes straight out of D1, in-process.** This page and the API are
+ * the same Cloudflare Worker, so it calls the job service directly instead of
+ * fetching its own `/api/jobs` over HTTP: no subrequest against the free plan's
+ * 50-per-request budget, no round trip, and — the reason this page used to render
+ * its error state instead of jobs — no base URL that can be configured wrongly.
+ * `src/lib/publicJobs.ts` has the full argument.
+ *
+ * All three outcomes are handled: rows, zero rows, and failure. There is no
+ * fourth branch and no path that renders an empty region.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import EmptyState from '@components/EmptyState.astro';
+import ErrorState from '@components/ErrorState.astro';
+import Hero from '@components/Hero.astro';
+import JobList from '@components/JobList.astro';
+import styles from '@styles/page.module.css';
+import { describeFailure, getRuntimeEnv, listPublishedJobs } from '@lib/publicJobs';
+import type { PageFailure } from '@lib/publicJobs';
+import { copy } from '@lib/copy';
+import { buildWebSiteJsonLd, pageTitle } from '@lib/seo';
+import { absoluteUrl, ROUTES, siteOrigin } from '@lib/urls';
+import type { JobSummary } from '@lib/types';
+
+// On-demand, explicitly. A prerendered page could neither read `locals.runtime`
+// (the D1 binding arrives per request) nor show a job published a minute ago.
+export const prerender = false;
+
+const LATEST_COUNT = 6;
+const LATEST_SECTION_ID = 'latest-jobs';
+const HEADING_ID = 'latest-jobs-heading';
+
+let jobs: JobSummary[] = [];
+let failure: PageFailure | null = null;
+
+try {
+  const env = getRuntimeEnv(Astro.locals);
+  const result = await listPublishedJobs(env, { page: 1, per_page: LATEST_COUNT });
+  jobs = result.jobs;
+} catch (error) {
+  // `describeFailure` logs the real cause and returns visitor-safe text. Never a
+  // stack trace, never a SQL fragment.
+  failure = describeFailure(error);
+}
+
+/**
+ * Cache header set AFTER the query, and conditional on it.
+ *
+ * 60s matches the API's own `s-maxage` for list responses (contract section 3),
+ * so the CDN and the origin agree on freshness. But an error page must never
+ * inherit that: caching a failure for a minute turns a one-second D1 blip into a
+ * minute of a broken home page for everyone.
+ */
+Astro.response.headers.set(
+  'Cache-Control',
+  failure === null
+    ? 'public, max-age=0, s-maxage=60, stale-while-revalidate=300'
+    : 'no-store',
+);
+
+const origin = siteOrigin(Astro.site);
+---
+
+<BaseLayout
+  title={pageTitle(copy.home.metaTitle)}
+  description={copy.home.metaDescription}
+  canonical={absoluteUrl(ROUTES.home, Astro.site)}
+  jsonLd={buildWebSiteJsonLd(origin)}
+>
+  <Hero latestSectionId={LATEST_SECTION_ID} />
+
+  <section class={styles.section} id={LATEST_SECTION_ID}>
+    <div class="jp-container">
+      <div class={styles.head}>
+        <div class={styles.headRow}>
+          <h2 class:list={[styles.title, styles.titleSmall]} id={HEADING_ID}>
+            {copy.home.latestHeading}
+          </h2>
+          <a class={styles.headLink} href={ROUTES.jobs}>{copy.home.latestAllLink}</a>
+        </div>
+        <p class={styles.support}>{copy.home.latestSupport}</p>
+      </div>
+
+      {
+        failure !== null ? (
+          <ErrorState
+            message={failure.message}
+            retryable={failure.retryable}
+            retryHref={ROUTES.home}
+          />
+        ) : jobs.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <JobList jobs={jobs} headingLevel={3} labelledBy={HEADING_ID} />
+        )
+      }
+    </div>
+  </section>
+</BaseLayout>

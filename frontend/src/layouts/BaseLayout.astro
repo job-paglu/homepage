@@ -1,0 +1,113 @@
+---
+/**
+ * The public shell. Every public page renders through this and nothing else.
+ *
+ * `global.css` is imported here, exactly once, and it is the only file that
+ * imports `tokens.css` — a component that re-imported tokens would duplicate
+ * the entire custom-property block in the bundle.
+ *
+ * Landmarks are emitted here rather than per page so a page cannot forget one:
+ * `header` / `main` / `footer`, one `<h1>` owned by the page, and the skip link
+ * as the first focusable element in the document.
+ */
+import FreeServicePopup from '@components/FreeServicePopup.astro';
+import Footer from '@components/Footer.astro';
+import Header from '@components/Header.astro';
+import SeoHead from '@components/SeoHead.astro';
+import SkipLink from '@components/SkipLink.astro';
+import { copy } from '@lib/copy';
+import { canonicalUrl } from '@lib/urls';
+import '@styles/global.css';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Absolute canonical. Defaults to the current path on the configured origin. */
+  canonical?: string;
+  ogType?: 'website' | 'article';
+  ogImage?: string | undefined;
+  noindex?: boolean;
+  /** A JSON-LD object. Serialised and escaped by SeoHead. */
+  jsonLd?: unknown;
+  /**
+   * The announcement dialog. Off for the 404 page: a visitor who has just hit a
+   * dead link does not need a modal 2.5 seconds later.
+   */
+  showPopup?: boolean;
+}
+
+const {
+  title,
+  description,
+  canonical = canonicalUrl(Astro.url, Astro.site),
+  ogType = 'website',
+  ogImage,
+  noindex = false,
+  jsonLd,
+  showPopup = true,
+} = Astro.props;
+
+const currentPath = Astro.url.pathname;
+
+/**
+ * Brand emerald, for `theme-color` only.
+ *
+ * A meta tag cannot read a CSS custom property, so this literal is unavoidable.
+ * It is --jp-c-emerald-700 in tokens.css and must be changed with it.
+ */
+const FAVICON_EMERALD = '#1f5f4b';
+
+/**
+ * The favicon is a real file at `public/favicon.svg`, not an inlined data URI.
+ *
+ * It was originally inlined here because `public/` belonged to no component and
+ * a `<link rel="icon">` to a missing file 404s on every page load. That file now
+ * exists and carries the same globe mark as Logo.astro, so referencing it is
+ * strictly better: the ~300 byte data URI is gone from the `<head>` of every
+ * response, and the browser caches one small file once instead of re-parsing it
+ * per page.
+ *
+ * Keep `public/favicon.svg` and `Logo.astro` showing the same mark. They were
+ * briefly different, which put one symbol in the tab and another on the page.
+ */
+---
+
+<!doctype html>
+<html lang={copy.site.htmlLang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {/* System font stack (tokens.css), so there is nothing to preconnect to and
+        no font-display trade-off to make. */}
+    {/* Dark mode is deliberately not shipped (tokens.css / DECISIONS D-15), so
+        the document declares light rather than letting the UA invert form
+        controls against a palette that was never contrast-checked for it. */}
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content={FAVICON_EMERALD} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <SeoHead
+      title={title}
+      description={description}
+      canonical={canonical}
+      ogType={ogType}
+      ogImage={ogImage}
+      noindex={noindex}
+      jsonLd={jsonLd}
+    />
+    <slot name="head" />
+  </head>
+
+  <body>
+    <SkipLink target="main" />
+    <Header currentPath={currentPath} />
+
+    {/* tabindex="-1" so the skip link can actually move focus here; without it
+        the browser scrolls but focus stays where it was. */}
+    <main id="main" class="jp-main" tabindex="-1">
+      <slot />
+    </main>
+
+    <Footer />
+    {showPopup && <FreeServicePopup />}
+  </body>
+</html>

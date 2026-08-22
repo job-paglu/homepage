@@ -1,0 +1,40 @@
+{
+  "name": "job-paglu-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Job Paglu - international jobs discovery platform (Astro frontend)",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro check && astro build",
+    "build:nocheck": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "astro": "astro",
+    "cf:dev": "wrangler pages dev dist --port 4321 --ip 0.0.0.0",
+    "cf:migrate": "wrangler d1 migrations apply job-paglu --local"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^12.6.13",
+    "@astrojs/react": "^4.3.0",
+    "astro": "^5.13.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@cloudflare/workers-types": "^4.20260116.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

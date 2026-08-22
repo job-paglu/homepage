@@ -1,0 +1,38 @@
+---
+/**
+ * Terms placeholder. Prerendered — nothing here changes per request.
+ *
+ * Same rule as the privacy page: no invented entity, no invented jurisdiction,
+ * no limitation-of-liability clause pretending to have been drafted. It states
+ * only what is verifiably true right now — that Job Paglu lists roles and links
+ * out, that it is not the employer, and that access is currently free.
+ */
+export const prerender = true;
+
+import BaseLayout from '@layouts/BaseLayout.astro';
+import styles from '@styles/page.module.css';
+import { copy } from '@lib/copy';
+import { pageTitle } from '@lib/seo';
+import { absoluteUrl, ROUTES } from '@lib/urls';
+---
+
+<BaseLayout
+  title={pageTitle(copy.terms.metaTitle)}
+  description={copy.terms.metaDescription}
+  canonical={absoluteUrl(ROUTES.terms, Astro.site)}
+>
+  <section class={styles.section}>
+    <div class="jp-container jp-container--prose">
+      <div class={styles.head}>
+        <h1 class={styles.title}>{copy.terms.heading}</h1>
+      </div>
+
+      <div class="jp-prose">
+        {copy.terms.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
+
+        <h2>{copy.terms.contactHeading}</h2>
+        <p>{copy.terms.contactBody}</p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,20 @@
+---
+/**
+ * The first focusable element on every page.
+ *
+ * Positioned off-screen with `transform`, not `display: none` — a hidden
+ * element is unreachable by the Tab key, which is the one thing a skip link
+ * must not be.
+ */
+import styles from '@styles/skipLink.module.css';
+import { copy } from '@lib/copy';
+
+interface Props {
+  /** id of the element to jump to. Must exist and be focusable via tabindex. */
+  target?: string;
+}
+
+const { target = 'main' } = Astro.props;
+---
+
+<a class={styles.link} href={`#${target}`}>{copy.nav.skipToContent}</a>

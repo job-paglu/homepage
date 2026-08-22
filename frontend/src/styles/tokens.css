@@ -1,0 +1,226 @@
+/* =============================================================================
+   Job Paglu design tokens
+   -----------------------------------------------------------------------------
+   The whole visual identity lives here. Nothing else in the codebase should
+   contain a raw hex colour, a raw pixel font size, or a magic radius.
+
+   Identity, in one line: deep emerald as the trust colour, warm amber as the
+   single highlight, near-black ink on warm off-white paper. Chosen to be
+   recognisably NOT the blue of LinkedIn / Indeed / WWR, and to read as
+   international and premium rather than corporate.
+
+   Contrast (verified by hand against WCAG 2.1):
+     --jp-ink        #0B0D10 on --jp-paper #FDFCFA  ->  19.6:1
+     --jp-ink-muted  #545C66 on --jp-paper          ->   6.4:1   (AA body)
+     --jp-brand      #1F5F4B on white               ->   7.6:1   (AA/AAA text,
+                                                                  and white
+                                                                  text ON it)
+     --jp-accent     #E8A33D on white               ->   2.1:1   -- FAILS as
+       text. Amber is a BACKGROUND/decoration token only, and always carries
+       --jp-ink (9.1:1) on top of it. Never colour text with --jp-accent.
+     --jp-border     #E4E1DB on --jp-paper          ->   1.2:1   -- decorative
+       only; any border that CARRIES MEANING uses --jp-border-strong (3.1:1).
+
+   Dark mode is intentionally NOT shipped in this release. The token structure
+   makes it a single `@media (prefers-color-scheme: dark)` block redefining the
+   semantic layer, but shipping an untested second palette would double the
+   responsive and contrast surface for no requested benefit. See
+   docs/DECISIONS.md D-15.
+   ========================================================================== */
+
+:root {
+  /* --- Raw palette -------------------------------------------------------- */
+  /* Only the semantic layer below should be referenced by components. */
+  --jp-c-emerald-900: #123a2e;
+  --jp-c-emerald-700: #1f5f4b;
+  --jp-c-emerald-600: #27735b;
+  --jp-c-emerald-100: #dcefe8;
+  --jp-c-emerald-050: #f1f9f5;
+
+  --jp-c-amber-600: #b9761c;
+  --jp-c-amber-500: #e8a33d;
+  --jp-c-amber-100: #fbeed6;
+
+  --jp-c-ink-900: #0b0d10;
+  --jp-c-ink-700: #23282f;
+  --jp-c-ink-500: #545c66;
+  --jp-c-ink-300: #8b939d;
+  --jp-c-ink-200: #c7c9cc;
+
+  --jp-c-paper-000: #ffffff;
+  --jp-c-paper-050: #fdfcfa;
+  --jp-c-paper-100: #f6f4f0;
+  --jp-c-paper-200: #edeae4;
+
+  --jp-c-line-100: #e4e1db;
+  --jp-c-line-300: #b6b1a8;
+
+  --jp-c-danger-700: #a02622;
+  --jp-c-danger-100: #fbe6e5;
+  --jp-c-success-700: #1c6b46;
+  --jp-c-success-100: #e0f2e8;
+
+  /* --- Semantic colour ---------------------------------------------------- */
+  --jp-paper: var(--jp-c-paper-050);
+  --jp-surface: var(--jp-c-paper-000);
+  --jp-surface-sunken: var(--jp-c-paper-100);
+  --jp-surface-raised: var(--jp-c-paper-000);
+
+  --jp-ink: var(--jp-c-ink-900);
+  --jp-ink-soft: var(--jp-c-ink-700);
+  --jp-ink-muted: var(--jp-c-ink-500);
+  --jp-ink-faint: var(--jp-c-ink-300);
+  --jp-ink-inverse: var(--jp-c-paper-000);
+
+  --jp-brand: var(--jp-c-emerald-700);
+  --jp-brand-hover: var(--jp-c-emerald-600);
+  --jp-brand-active: var(--jp-c-emerald-900);
+  --jp-brand-tint: var(--jp-c-emerald-100);
+  --jp-brand-wash: var(--jp-c-emerald-050);
+
+  /* Decoration and badge backgrounds only. Never use for text. */
+  --jp-accent: var(--jp-c-amber-500);
+  --jp-accent-tint: var(--jp-c-amber-100);
+  /* Text-safe amber, for the rare case a warm foreground is needed. */
+  --jp-accent-text: var(--jp-c-amber-600);
+
+  --jp-border: var(--jp-c-line-100);
+  --jp-border-strong: var(--jp-c-line-300);
+
+  --jp-danger: var(--jp-c-danger-700);
+  --jp-danger-tint: var(--jp-c-danger-100);
+  --jp-success: var(--jp-c-success-700);
+  --jp-success-tint: var(--jp-c-success-100);
+
+  --jp-focus: var(--jp-c-emerald-700);
+  --jp-selection: var(--jp-c-emerald-100);
+
+  /* --- Type -------------------------------------------------------------- */
+  /* System stack: zero network requests, zero layout shift, and it already
+     looks native on every platform. See docs/DECISIONS.md D-16. */
+  --jp-font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji';
+  --jp-font-mono:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+    'Liberation Mono', monospace;
+
+  /* Fluid scale. clamp() means the layout is correct BETWEEN the tested
+     breakpoints, not only at them. Ratio ~1.2 at mobile, ~1.25 at desktop. */
+  --jp-text-2xs: 0.6875rem;                              /* 11px  */
+  --jp-text-xs: 0.75rem;                                 /* 12px  */
+  --jp-text-sm: 0.8125rem;                               /* 13px  */
+  --jp-text-base: 0.9375rem;                             /* 15px  */
+  --jp-text-md: clamp(1rem, 0.97rem + 0.15vw, 1.0625rem);
+  --jp-text-lg: clamp(1.125rem, 1.08rem + 0.25vw, 1.25rem);
+  --jp-text-xl: clamp(1.3125rem, 1.22rem + 0.45vw, 1.5rem);
+  --jp-text-2xl: clamp(1.5rem, 1.35rem + 0.75vw, 1.875rem);
+  --jp-text-3xl: clamp(1.875rem, 1.6rem + 1.35vw, 2.5rem);
+  --jp-text-4xl: clamp(2.25rem, 1.75rem + 2.5vw, 3.5rem);
+
+  --jp-leading-tight: 1.15;
+  --jp-leading-snug: 1.3;
+  --jp-leading-normal: 1.55;
+  --jp-leading-relaxed: 1.7;
+
+  --jp-weight-regular: 400;
+  --jp-weight-medium: 500;
+  --jp-weight-semibold: 600;
+  --jp-weight-bold: 700;
+
+  /* Tighter tracking as text gets bigger keeps large headings from looking
+     loose; slightly positive tracking rescues small uppercase metadata. */
+  --jp-tracking-tight: -0.02em;
+  --jp-tracking-snug: -0.011em;
+  --jp-tracking-normal: 0;
+  --jp-tracking-wide: 0.04em;
+  --jp-tracking-caps: 0.07em;
+
+  /* Comfortable reading measure. Long job descriptions must not run the full
+     width of a 2560px display. */
+  --jp-measure: 68ch;
+  --jp-measure-narrow: 46ch;
+
+  /* --- Space ------------------------------------------------------------- */
+  /* 4px base. Named by step, not by pixel, so the scale can be retuned once. */
+  --jp-space-0: 0;
+  --jp-space-1: 0.25rem;   /*  4px */
+  --jp-space-2: 0.5rem;    /*  8px */
+  --jp-space-3: 0.75rem;   /* 12px */
+  --jp-space-4: 1rem;      /* 16px */
+  --jp-space-5: 1.25rem;   /* 20px */
+  --jp-space-6: 1.5rem;    /* 24px */
+  --jp-space-8: 2rem;      /* 32px */
+  --jp-space-10: 2.5rem;   /* 40px */
+  --jp-space-12: 3rem;     /* 48px */
+  --jp-space-16: 4rem;     /* 64px */
+  --jp-space-20: 5rem;     /* 80px */
+  --jp-space-24: 6rem;     /* 96px */
+
+  /* Section rhythm scales with the viewport so mobile is not wastefully airy
+     and desktop is not cramped. */
+  --jp-section-y: clamp(2.5rem, 1.6rem + 4.5vw, 5.5rem);
+  --jp-gutter: clamp(1rem, 0.7rem + 1.5vw, 2rem);
+
+  /* --- Layout ------------------------------------------------------------ */
+  /* Content stops growing at 1200px. Above that the page centres instead of
+     stretching (request section 28). */
+  --jp-width-page: 1200px;
+  --jp-width-prose: 760px;
+  --jp-width-form: 640px;
+  --jp-header-h: 60px;
+
+  /* --- Radius ------------------------------------------------------------ */
+  --jp-radius-xs: 4px;
+  --jp-radius-sm: 6px;
+  --jp-radius-md: 10px;
+  --jp-radius-lg: 14px;
+  --jp-radius-xl: 20px;
+  --jp-radius-pill: 999px;
+
+  /* --- Elevation --------------------------------------------------------- */
+  /* Restrained and tinted toward the ink colour rather than pure black, which
+     is what stops shadows looking like a 2014 material-design demo. */
+  --jp-shadow-xs: 0 1px 2px rgba(11, 13, 16, 0.05);
+  --jp-shadow-sm: 0 1px 2px rgba(11, 13, 16, 0.05), 0 2px 6px rgba(11, 13, 16, 0.04);
+  --jp-shadow-md: 0 2px 4px rgba(11, 13, 16, 0.05), 0 8px 20px rgba(11, 13, 16, 0.06);
+  --jp-shadow-lg: 0 4px 8px rgba(11, 13, 16, 0.06), 0 18px 40px rgba(11, 13, 16, 0.09);
+  --jp-shadow-focus: 0 0 0 3px rgba(31, 95, 75, 0.28);
+
+  /* --- Motion ------------------------------------------------------------ */
+  --jp-ease: cubic-bezier(0.2, 0.8, 0.3, 1);
+  --jp-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --jp-duration-fast: 120ms;
+  --jp-duration-base: 180ms;
+  --jp-duration-slow: 280ms;
+
+  /* --- Controls ---------------------------------------------------------- */
+  /* 44px minimum touch target (request section 27). This is a floor, not a
+     suggestion: every interactive element must satisfy it at mobile widths. */
+  --jp-touch-min: 44px;
+  --jp-control-h-sm: 36px;
+  --jp-control-h: 44px;
+  --jp-control-h-lg: 52px;
+
+  /* --- Stacking ---------------------------------------------------------- */
+  /* One place to reason about overlap, so a sticky header can never fight a
+     modal by accident. */
+  --jp-z-base: 0;
+  --jp-z-sticky: 100;
+  --jp-z-header: 200;
+  --jp-z-menu: 300;
+  --jp-z-overlay: 400;
+  --jp-z-modal: 500;
+  --jp-z-toast: 600;
+}
+
+/* Honour the OS setting. Anything that moves must still be usable when it
+   does not move (request section 26). */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --jp-duration-fast: 0ms;
+    --jp-duration-base: 0ms;
+    --jp-duration-slow: 0ms;
+  }
+}

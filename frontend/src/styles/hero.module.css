@@ -1,0 +1,79 @@
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding-block: var(--jp-section-y);
+  /* A single soft emerald wash rather than an image: nothing to download, no
+     layout shift, and it still gives the page a top that feels designed. */
+  background-image:
+    radial-gradient(60rem 28rem at 12% -10%, var(--jp-brand-wash), transparent 70%),
+    radial-gradient(44rem 22rem at 100% 0%, var(--jp-accent-tint), transparent 65%);
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--jp-space-6);
+  min-width: 0;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--jp-space-2);
+  padding: var(--jp-space-1) var(--jp-space-3);
+  border: 1px solid var(--jp-border-strong);
+  border-radius: var(--jp-radius-pill);
+  background-color: var(--jp-surface);
+  color: var(--jp-ink-soft);
+  font-size: var(--jp-text-xs);
+  font-weight: var(--jp-weight-semibold);
+  letter-spacing: var(--jp-tracking-wide);
+  text-transform: uppercase;
+}
+
+.headline {
+  max-width: 22ch;
+  font-size: var(--jp-text-4xl);
+  font-weight: var(--jp-weight-bold);
+  letter-spacing: var(--jp-tracking-tight);
+  line-height: var(--jp-leading-tight);
+}
+
+/* The second sentence in emerald turns the headline into a two-beat statement
+   without needing a second font size. */
+.headlineAccent {
+  color: var(--jp-brand);
+}
+
+.support {
+  max-width: var(--jp-measure);
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-md);
+  line-height: var(--jp-leading-relaxed);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--jp-space-3);
+  width: 100%;
+}
+
+/* At 320px two buttons side by side would each be ~140px wide with a wrapped
+   label. Full-width stacked until there is room for both. */
+.action {
+  flex: 1 1 100%;
+}
+
+@media (min-width: 480px) {
+  .action {
+    flex: 0 1 auto;
+  }
+}
+
+@media (min-width: 900px) {
+  .headline {
+    max-width: 26ch;
+  }
+}

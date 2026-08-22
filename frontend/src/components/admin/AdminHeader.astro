@@ -1,0 +1,56 @@
+---
+/**
+ * Admin header: brand, who is signed in, sign out.
+ *
+ * The signed-in identity is filled in by the browser rather than rendered on the
+ * server. Doing it server-side would mean verifying the Access JWT again on
+ * every page view for one line of text, when an island on the page is already
+ * asking `/api/admin/me`.
+ *
+ * **Email, not a name.** `GET /api/admin/me` returns `{email, sub}` and nothing
+ * else: Cloudflare Access is the identity provider, there is no `admin_users`
+ * row, and so there is no display name and no `last_login_at` to show. `sub` is
+ * an opaque Access identifier — useful in a log line, meaningless to a human —
+ * so it is deliberately not rendered. Reintroducing a name would mean inventing
+ * a user record that does not exist.
+ *
+ * Sign out is a plain link to Cloudflare Access's own logout endpoint. It is not
+ * a button calling an API of ours, because we have no session to destroy: the
+ * credential is Access's `CF_Authorization` cookie and only Access can clear it.
+ *
+ * The script is an Astro `<script>` with imports, so it is bundled to an
+ * external module. That keeps it compatible with the strict CSP (no
+ * `unsafe-inline` for scripts) documented in docs/SECURITY.md.
+ */
+import { ACCESS_LOGOUT_PATH } from '@lib/adminIdentity';
+---
+
+<header class="jpa-header">
+  <a class="jpa-header__brand" href="/admin/jobs">
+    Job Paglu <span>admin</span>
+  </a>
+  <div class="jpa-header__meta">
+    <span class="jpa-header__who" data-admin-email aria-live="polite"></span>
+    <a class="jpa-btn jpa-btn--ghost jpa-btn--sm" href={ACCESS_LOGOUT_PATH} rel="nofollow">
+      Sign out
+    </a>
+  </div>
+</header>
+
+<script>
+  import { loadIdentity } from '../../lib/adminIdentity';
+
+  const emailEl = document.querySelector<HTMLElement>('[data-admin-email]');
+
+  // Shares the deduplicated probe with whichever island is on the page, so the
+  // header costs no extra request. A 401 is deliberately ignored here: the
+  // island renders the sign-in notice, and the header showing nothing is the
+  // honest result — there is no identity to display.
+  void loadIdentity()
+    .then((identity) => {
+      if (emailEl) emailEl.textContent = identity.email;
+    })
+    .catch(() => {
+      /* not authenticated: the island explains it */
+    });
+</script>

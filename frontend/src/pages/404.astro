@@ -1,0 +1,39 @@
+---
+/**
+ * Static 404. Prerendered because it depends on nothing: no API call, no
+ * request-time data, so Vercel serves it from the edge as a static asset without
+ * invoking a function at all.
+ *
+ * `noindex` because a 404 page that gets indexed competes with real content for
+ * the same queries. The popup is suppressed: a visitor who has just hit a dead
+ * link does not need a modal 2.5 seconds later.
+ */
+export const prerender = true;
+
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Button from '@components/Button.astro';
+import styles from '@styles/page.module.css';
+import { copy } from '@lib/copy';
+import { pageTitle } from '@lib/seo';
+import { absoluteUrl, ROUTES } from '@lib/urls';
+---
+
+<BaseLayout
+  title={pageTitle(copy.notFound.metaTitle)}
+  description={copy.notFound.metaDescription}
+  canonical={absoluteUrl('/404', Astro.site)}
+  noindex
+  showPopup={false}
+>
+  <section class={styles.section}>
+    <div class:list={['jp-container', styles.centred]}>
+      <p class={styles.statusCode}>404</p>
+      <h1 class={styles.title}>{copy.notFound.heading}</h1>
+      <p class={styles.support}>{copy.notFound.body}</p>
+      <div class={styles.centredActions}>
+        <Button href={ROUTES.jobs} variant="primary">{copy.notFound.action}</Button>
+        <Button href={ROUTES.home} variant="quiet">{copy.notFound.secondaryAction}</Button>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

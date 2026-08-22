@@ -1,0 +1,108 @@
+/* Two presentations of the same facts: a compact strip for the card, and a
+   labelled description list for the detail page. Both come from one component
+   so a field added to the API cannot appear in one and be forgotten in the
+   other. */
+
+/* --- Card variant --------------------------------------------------------- */
+
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--jp-space-1) var(--jp-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+  color: var(--jp-ink-soft);
+  font-size: var(--jp-text-sm);
+  font-weight: var(--jp-weight-medium);
+}
+
+.stripItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--jp-space-2);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The middot is decoration between wrapped items and must not be read aloud, so
+   it is generated content rather than a text node. `:not(:first-child)` keeps
+   it out of the leading position after a wrap. */
+.stripItem:not(:first-child)::before {
+  content: '\00b7';
+  /* Alt-text syntax: generated content IS announced by most screen readers, and
+     "Berlin middot Full-time" is noise. The empty alt string suppresses it.
+     Declared twice so a browser without the syntax keeps the visible glyph. */
+  content: '\00b7' / '';
+  color: var(--jp-ink-faint);
+  font-weight: var(--jp-weight-bold);
+}
+
+.salary {
+  display: flex;
+  align-items: baseline;
+  gap: var(--jp-space-2);
+  min-width: 0;
+  color: var(--jp-ink);
+  font-size: var(--jp-text-base);
+  font-weight: var(--jp-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.qualification {
+  display: flex;
+  gap: var(--jp-space-2);
+  min-width: 0;
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-sm);
+  overflow-wrap: anywhere;
+}
+
+/* Small uppercase labels need positive tracking to stay legible. */
+.inlineLabel {
+  flex: none;
+  color: var(--jp-ink-faint);
+  font-size: var(--jp-text-2xs);
+  font-weight: var(--jp-weight-bold);
+  letter-spacing: var(--jp-tracking-caps);
+  text-transform: uppercase;
+}
+
+/* --- Detail variant ------------------------------------------------------- */
+
+.grid {
+  display: grid;
+  gap: var(--jp-space-4) var(--jp-space-6);
+  margin: 0;
+  /* One column at 320px, then as many as fit. min(100%, …) is the guard against
+     a fixed minimum forcing overflow on a narrow phone. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+}
+
+.row {
+  min-width: 0;
+}
+
+.term {
+  margin: 0;
+  color: var(--jp-ink-faint);
+  font-size: var(--jp-text-2xs);
+  font-weight: var(--jp-weight-bold);
+  letter-spacing: var(--jp-tracking-caps);
+  text-transform: uppercase;
+}
+
+.value {
+  margin: var(--jp-space-1) 0 0;
+  color: var(--jp-ink);
+  font-size: var(--jp-text-base);
+  font-weight: var(--jp-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.valueStrong {
+  font-size: var(--jp-text-md);
+  font-weight: var(--jp-weight-semibold);
+}

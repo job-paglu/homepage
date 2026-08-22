@@ -1,0 +1,60 @@
+/* The valid case reuses button.module.css through Button.astro. Only the
+   refusal path needs its own styling, and it is deliberately not a link:
+   `aria-disabled` on an <a href> still navigates, so there is no href at all. */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jp-space-2);
+  min-width: 0;
+}
+
+.blocked {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--jp-space-2);
+  min-height: var(--jp-control-h);
+  padding: var(--jp-space-2) var(--jp-space-4);
+  border: 1px dashed var(--jp-border-strong);
+  border-radius: var(--jp-radius-md);
+  background-color: var(--jp-surface-sunken);
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-base);
+  font-weight: var(--jp-weight-semibold);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* Explains the refusal in words rather than leaving a mysteriously dead
+   button. `--jp-danger` is a text-safe token; the tint is the background. */
+.blockedNote {
+  margin: 0;
+  padding: var(--jp-space-2) var(--jp-space-3);
+  border-radius: var(--jp-radius-sm);
+  background-color: var(--jp-danger-tint);
+  color: var(--jp-danger);
+  font-size: var(--jp-text-sm);
+  line-height: var(--jp-leading-normal);
+}
+
+/* Shown next to a valid link on the detail page so the visitor can see which
+   host they are about to be sent to before they commit to a new tab. */
+.host {
+  margin: 0;
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-xs);
+  overflow-wrap: anywhere;
+}
+
+.hostName {
+  font-family: var(--jp-font-mono);
+  font-size: var(--jp-text-xs);
+  color: var(--jp-ink-soft);
+}
+
+.externalIcon {
+  flex: none;
+  width: 0.85em;
+  height: 0.85em;
+}

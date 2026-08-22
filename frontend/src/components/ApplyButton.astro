@@ -1,0 +1,72 @@
+---
+/**
+ * The outbound apply link — the one place a bad database value becomes an attack
+ * on a visitor (contract section 7).
+ *
+ * The backend validates `apply_url` on write. This re-validates on render,
+ * because a row edited straight in the database, or restored from an older
+ * backup, must not be able to turn into a live `javascript:` link. When the
+ * guard fails, the unsafe value is never emitted anywhere in the document —
+ * not in an `href`, not in a `title`, not in a data attribute — and the visitor
+ * gets an inert element with a written explanation instead of a dead button.
+ *
+ * The accessible name is "Apply for <job title>", never "click here" or a bare
+ * "Apply Now" repeated once per card.
+ */
+import Button from '@components/Button.astro';
+import styles from '@styles/applyButton.module.css';
+import { copy } from '@lib/copy';
+import { applyUrlHost, isSafeApplyUrl } from '@lib/urls';
+
+interface Props {
+  /** Only the two fields this component needs, so a JobSummary or a Job both fit. */
+  job: { apply_url: string; title: string };
+  /** `detail` adds the destination host and the new-tab note. */
+  variant?: 'card' | 'detail';
+  size?: 'sm' | 'md' | 'lg';
+  full?: boolean;
+  class?: string | undefined;
+}
+
+const { job, variant = 'card', size = 'md', full = false, class: className } = Astro.props;
+
+const safe = isSafeApplyUrl(job.apply_url);
+const host = safe ? applyUrlHost(job.apply_url) : null;
+const accessibleName = `${copy.job.applySuffix} ${job.title}`;
+---
+
+{
+  safe ? (
+    <div class:list={[styles.wrap, className]}>
+      <Button
+        href={job.apply_url}
+        variant="primary"
+        size={size}
+        full={full}
+        external
+        aria-label={accessibleName}
+      >
+        {copy.job.apply}
+      </Button>
+      {variant === 'detail' && (
+        <p class={styles.host}>
+          {copy.job.applyExternalNote}
+          {host && (
+            <>
+              {' '}
+              <span class={styles.hostName}>{host}</span>
+            </>
+          )}
+        </p>
+      )}
+    </div>
+  ) : (
+    <div class:list={[styles.wrap, className]}>
+      {/* A <span>, not a disabled <a>: `aria-disabled` on an anchor with an href
+          still navigates, and an anchor without an href is not focusable — so
+          there is nothing here to focus and nothing to follow. */}
+      <span class={styles.blocked}>{copy.job.applyUnavailable}</span>
+      {variant === 'detail' && <p class={styles.blockedNote}>{copy.job.applyUnavailableDetail}</p>}
+    </div>
+  )
+}

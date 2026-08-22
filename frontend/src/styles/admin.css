@@ -1,0 +1,526 @@
+/* =============================================================================
+   Job Paglu admin dashboard — global layer
+   -----------------------------------------------------------------------------
+   Standalone on purpose. The admin surface must not depend on `global.css` or
+   `BaseLayout.astro`: the public site's typography, hero rhythm and marketing
+   spacing are wrong for a dense tool, and coupling the two would mean every
+   public design change risks the dashboard. Only `tokens.css` is shared, so a
+   brand colour change still lands in both.
+
+   Deliberately plainer and denser than the public site: this is a workbench.
+   All classes are prefixed `jpa-` so they cannot collide with public styles if
+   the two stylesheets ever meet on one page.
+   ========================================================================== */
+
+/* --- Reset (minimal, admin-local) ---------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body.jpa-body {
+  margin: 0;
+  background: var(--jp-surface-sunken);
+  color: var(--jp-ink);
+  font-family: var(--jp-font-sans);
+  font-size: var(--jp-text-base);
+  line-height: var(--jp-leading-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--jp-selection);
+}
+
+/* Set by ConfirmDialog while it is open, so the page behind a modal cannot be
+   scrolled out from under it. */
+html[data-jpa-modal='open'] body.jpa-body {
+  overflow: hidden;
+}
+
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+figure {
+  margin: 0;
+}
+
+ul {
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: var(--jp-brand);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
+}
+
+a:hover {
+  color: var(--jp-brand-hover);
+}
+
+/* One focus treatment for the whole dashboard. Never colour-only: the ring is a
+   visible outline plus a shadow, so it survives forced-colours mode. */
+:focus-visible {
+  outline: 2px solid var(--jp-focus);
+  outline-offset: 2px;
+  box-shadow: var(--jp-shadow-focus);
+  border-radius: var(--jp-radius-xs);
+}
+
+/* --- Utilities ------------------------------------------------------------ */
+
+.jpa-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.jpa-skip {
+  position: absolute;
+  top: var(--jp-space-2);
+  left: var(--jp-space-2);
+  z-index: var(--jp-z-toast);
+  padding: var(--jp-space-2) var(--jp-space-4);
+  background: var(--jp-surface);
+  border: 1px solid var(--jp-border-strong);
+  border-radius: var(--jp-radius-sm);
+  transform: translateY(-200%);
+}
+
+.jpa-skip:focus-visible {
+  transform: translateY(0);
+}
+
+/* --- Chrome: header ------------------------------------------------------- */
+
+.jpa-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--jp-space-3);
+  min-height: var(--jp-header-h);
+  padding: var(--jp-space-2) var(--jp-gutter);
+  background: var(--jp-surface);
+  border-bottom: 1px solid var(--jp-border);
+}
+
+.jpa-header__brand {
+  color: var(--jp-ink);
+  font-weight: var(--jp-weight-semibold);
+  letter-spacing: var(--jp-tracking-snug);
+  text-decoration: none;
+}
+
+.jpa-header__brand span {
+  color: var(--jp-ink-muted);
+  font-weight: var(--jp-weight-regular);
+  font-size: var(--jp-text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--jp-tracking-caps);
+}
+
+.jpa-header__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--jp-space-3);
+}
+
+.jpa-header__who {
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-sm);
+}
+
+/* --- Chrome: shell and nav ----------------------------------------------- */
+
+.jpa-shell {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--jp-space-4);
+  max-width: var(--jp-width-page);
+  margin: 0 auto;
+  padding: var(--jp-space-4) var(--jp-gutter) var(--jp-space-16);
+}
+
+/* Login and any other chrome-free page: the island owns the whole viewport, so
+   the shell must not impose a page width or gutter on it. */
+.jpa-shell--bare {
+  max-width: none;
+  padding: 0;
+}
+
+.jpa-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--jp-space-1);
+}
+
+.jpa-nav__link {
+  display: flex;
+  align-items: center;
+  min-height: var(--jp-touch-min);
+  padding: 0 var(--jp-space-4);
+  color: var(--jp-ink-soft);
+  font-size: var(--jp-text-sm);
+  font-weight: var(--jp-weight-medium);
+  text-decoration: none;
+  border-radius: var(--jp-radius-sm);
+}
+
+.jpa-nav__link:hover {
+  background: var(--jp-surface);
+  color: var(--jp-ink);
+}
+
+/* Current page is marked by weight and a border as well as colour, so the cue
+   survives greyscale and forced-colours rendering. */
+.jpa-nav__link[aria-current='page'] {
+  background: var(--jp-surface);
+  border: 1px solid var(--jp-border-strong);
+  color: var(--jp-brand);
+  font-weight: var(--jp-weight-semibold);
+}
+
+@media (min-width: 900px) {
+  .jpa-shell {
+    grid-template-columns: 190px minmax(0, 1fr);
+    gap: var(--jp-space-8);
+    padding-top: var(--jp-space-8);
+  }
+
+  .jpa-nav ul {
+    flex-direction: column;
+    position: sticky;
+    top: var(--jp-space-8);
+  }
+
+  /* Declared after `.jpa-shell` so it wins on source order at equal specificity;
+     without this the chrome-free shell would keep an empty 190px nav column. */
+  .jpa-shell--bare {
+    grid-template-columns: 1fr;
+    padding: 0;
+  }
+}
+
+/* --- Page furniture ------------------------------------------------------ */
+
+.jpa-main {
+  min-width: 0;
+}
+
+.jpa-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--jp-space-3);
+  margin-bottom: var(--jp-space-5);
+}
+
+.jpa-page-title {
+  font-size: var(--jp-text-xl);
+  font-weight: var(--jp-weight-semibold);
+  line-height: var(--jp-leading-snug);
+  letter-spacing: var(--jp-tracking-snug);
+}
+
+.jpa-page-lede {
+  margin-top: var(--jp-space-1);
+  max-width: var(--jp-measure);
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-sm);
+}
+
+.jpa-panel {
+  padding: var(--jp-space-4);
+  background: var(--jp-surface);
+  border: 1px solid var(--jp-border);
+  border-radius: var(--jp-radius-md);
+}
+
+@media (min-width: 600px) {
+  .jpa-panel {
+    padding: var(--jp-space-6);
+  }
+}
+
+/* --- Buttons ------------------------------------------------------------- */
+
+.jpa-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--jp-space-2);
+  min-height: var(--jp-touch-min);
+  padding: 0 var(--jp-space-4);
+  background: var(--jp-surface);
+  color: var(--jp-ink);
+  font: inherit;
+  font-size: var(--jp-text-sm);
+  font-weight: var(--jp-weight-medium);
+  text-decoration: none;
+  border: 1px solid var(--jp-border-strong);
+  border-radius: var(--jp-radius-sm);
+  cursor: pointer;
+  transition: background var(--jp-duration-fast) var(--jp-ease),
+    border-color var(--jp-duration-fast) var(--jp-ease);
+}
+
+.jpa-btn:hover:not(:disabled) {
+  background: var(--jp-surface-sunken);
+}
+
+.jpa-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.jpa-btn--primary {
+  background: var(--jp-brand);
+  border-color: var(--jp-brand);
+  color: var(--jp-ink-inverse);
+}
+
+.jpa-btn--primary:hover:not(:disabled) {
+  background: var(--jp-brand-hover);
+  border-color: var(--jp-brand-hover);
+}
+
+.jpa-btn--danger {
+  background: var(--jp-surface);
+  border-color: var(--jp-danger);
+  color: var(--jp-danger);
+}
+
+.jpa-btn--danger:hover:not(:disabled) {
+  background: var(--jp-danger-tint);
+}
+
+.jpa-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--jp-ink-soft);
+}
+
+.jpa-btn--ghost:hover:not(:disabled) {
+  background: var(--jp-surface-sunken);
+}
+
+/* Compact rows on a pointer device; still 44px wherever a finger is likely. */
+@media (min-width: 700px) {
+  .jpa-btn--sm {
+    min-height: var(--jp-control-h-sm);
+    padding: 0 var(--jp-space-3);
+    font-size: var(--jp-text-xs);
+  }
+}
+
+/* --- Form controls ------------------------------------------------------- */
+
+.jpa-label {
+  display: block;
+  margin-bottom: var(--jp-space-1);
+  font-size: var(--jp-text-sm);
+  font-weight: var(--jp-weight-medium);
+}
+
+.jpa-req {
+  color: var(--jp-danger);
+}
+
+.jpa-input,
+.jpa-select,
+.jpa-textarea {
+  display: block;
+  width: 100%;
+  min-height: var(--jp-control-h);
+  padding: var(--jp-space-2) var(--jp-space-3);
+  background: var(--jp-surface);
+  color: var(--jp-ink);
+  font: inherit;
+  font-size: var(--jp-text-md);
+  border: 1px solid var(--jp-border-strong);
+  border-radius: var(--jp-radius-sm);
+}
+
+.jpa-textarea {
+  min-height: calc(var(--jp-control-h) * 3);
+  line-height: var(--jp-leading-normal);
+  resize: vertical;
+}
+
+.jpa-input[aria-invalid='true'],
+.jpa-select[aria-invalid='true'],
+.jpa-textarea[aria-invalid='true'] {
+  border-color: var(--jp-danger);
+  /* Doubled border weight so the invalid state is not carried by colour alone. */
+  border-width: 2px;
+}
+
+.jpa-hint {
+  margin-top: var(--jp-space-1);
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-xs);
+}
+
+.jpa-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--jp-space-1);
+  margin-top: var(--jp-space-1);
+  color: var(--jp-danger);
+  font-size: var(--jp-text-xs);
+  font-weight: var(--jp-weight-medium);
+}
+
+.jpa-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--jp-space-2);
+  min-height: var(--jp-touch-min);
+  font-size: var(--jp-text-sm);
+}
+
+.jpa-checkbox input {
+  width: 1.125rem;
+  height: 1.125rem;
+  accent-color: var(--jp-brand);
+}
+
+/* --- Status badges ------------------------------------------------------- */
+
+.jpa-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--jp-space-1);
+  padding: var(--jp-space-1) var(--jp-space-2);
+  font-size: var(--jp-text-2xs);
+  font-weight: var(--jp-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--jp-tracking-caps);
+  border: 1px solid var(--jp-border-strong);
+  border-radius: var(--jp-radius-pill);
+  white-space: nowrap;
+}
+
+.jpa-badge--published {
+  background: var(--jp-success-tint);
+  border-color: var(--jp-success);
+  color: var(--jp-success);
+}
+
+.jpa-badge--draft {
+  background: var(--jp-surface-sunken);
+  color: var(--jp-ink-muted);
+}
+
+.jpa-badge--unpublished {
+  background: var(--jp-accent-tint);
+  border-color: var(--jp-accent-text);
+  color: var(--jp-accent-text);
+}
+
+/* --- Alerts and states -------------------------------------------------- */
+
+.jpa-alert {
+  display: flex;
+  gap: var(--jp-space-2);
+  padding: var(--jp-space-3) var(--jp-space-4);
+  margin-bottom: var(--jp-space-4);
+  font-size: var(--jp-text-sm);
+  border: 1px solid var(--jp-border-strong);
+  border-left-width: 4px;
+  border-radius: var(--jp-radius-sm);
+  background: var(--jp-surface);
+}
+
+.jpa-alert--error {
+  border-left-color: var(--jp-danger);
+  background: var(--jp-danger-tint);
+  color: var(--jp-ink);
+}
+
+.jpa-alert--success {
+  border-left-color: var(--jp-success);
+  background: var(--jp-success-tint);
+}
+
+.jpa-alert--info {
+  border-left-color: var(--jp-brand);
+  background: var(--jp-brand-wash);
+}
+
+.jpa-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--jp-space-3);
+  padding: var(--jp-space-12) var(--jp-space-4);
+  text-align: center;
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-sm);
+}
+
+.jpa-state strong {
+  display: block;
+  color: var(--jp-ink);
+  font-size: var(--jp-text-md);
+}
+
+.jpa-spinner {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--jp-border-strong);
+  border-top-color: var(--jp-brand);
+  border-radius: var(--jp-radius-pill);
+  animation: jpa-spin 700ms linear infinite;
+}
+
+@keyframes jpa-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Reduced motion: stop the rotation, keep the shape as a static indicator so
+   the loading state is still visible. */
+@media (prefers-reduced-motion: reduce) {
+  .jpa-spinner {
+    animation: none;
+    border-top-color: var(--jp-brand);
+  }
+}
+
+/* --- Toolbar (filters + search) ----------------------------------------- */
+
+.jpa-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--jp-space-3);
+  margin-bottom: var(--jp-space-4);
+}
+
+.jpa-toolbar > * {
+  flex: 1 1 12rem;
+}
+
+.jpa-toolbar__actions {
+  flex: 0 0 auto;
+}

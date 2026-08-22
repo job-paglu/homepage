@@ -1,0 +1,142 @@
+/* Shared by LoadingState, EmptyState and ErrorState. Every API-driven page
+   renders exactly one of the three, never a blank region. */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--jp-space-3);
+  padding: var(--jp-space-10) var(--jp-space-5);
+  border: 1px solid var(--jp-border);
+  border-radius: var(--jp-radius-lg);
+  background-color: var(--jp-surface);
+  text-align: center;
+}
+
+.error {
+  border-color: var(--jp-danger);
+  background-color: var(--jp-danger-tint);
+}
+
+.icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  color: var(--jp-ink-faint);
+}
+
+.errorIcon {
+  color: var(--jp-danger);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--jp-text-xl);
+  font-weight: var(--jp-weight-semibold);
+}
+
+.body {
+  margin: 0;
+  max-width: 46ch;
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-base);
+  line-height: var(--jp-leading-normal);
+}
+
+.errorBody {
+  color: var(--jp-ink-soft);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--jp-space-3);
+  margin-top: var(--jp-space-2);
+}
+
+/* Small, monospaced, and last: useful to support, invisible to everyone else.
+   The API's request id is safe to show — the stack trace it correlates with
+   stays in the server log (contract section 1). */
+.requestId {
+  margin: 0;
+  color: var(--jp-ink-faint);
+  font-family: var(--jp-font-mono);
+  font-size: var(--jp-text-2xs);
+  overflow-wrap: anywhere;
+}
+
+/* --- Skeleton ------------------------------------------------------------- */
+
+/* Shape-matched to JobCard so a swap does not shift the layout. */
+.skeletonList {
+  display: grid;
+  gap: var(--jp-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 900px) {
+  .skeletonList {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    gap: var(--jp-space-5);
+  }
+}
+
+.skeletonCard {
+  min-width: 0;
+  padding: var(--jp-space-5);
+  border: 1px solid var(--jp-border);
+  border-radius: var(--jp-radius-lg);
+  background-color: var(--jp-surface);
+}
+
+.bar {
+  height: 0.75rem;
+  border-radius: var(--jp-radius-pill);
+  background-color: var(--jp-surface-sunken);
+  background-image: linear-gradient(
+    90deg,
+    var(--jp-surface-sunken) 0%,
+    var(--jp-border) 50%,
+    var(--jp-surface-sunken) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.bar + .bar {
+  margin-top: var(--jp-space-3);
+}
+
+.barTitle {
+  height: 1.25rem;
+  width: 72%;
+}
+
+.barShort {
+  width: 45%;
+}
+
+.barMedium {
+  width: 88%;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* A perpetual shimmer is nauseating for some vestibular conditions and is the
+   textbook case for this query. The grey blocks alone still communicate
+   "content is coming". */
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    animation: none;
+    background-image: none;
+  }
+}

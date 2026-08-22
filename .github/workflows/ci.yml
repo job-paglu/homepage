@@ -1,0 +1,374 @@
+# =============================================================================
+# Job Paglu - continuous integration
+# -----------------------------------------------------------------------------
+# Runs on every pull request and on every push to `main`.
+#
+# HONEST STATUS: this workflow has never executed. It is written from the
+# repository's declared toolchain and scripts, not from a green run. Two
+# bootstrap steps must happen on a machine that actually has the toolchains
+# before it can pass at all - see "BOOTSTRAP" below and scripts/README.md.
+#
+# DESIGN: four independent jobs, no `needs:` between them. That is deliberate -
+# if the frontend typecheck fails you still want to see whether `go vet` passed,
+# and vice versa. Chaining them would hide the second failure behind the first
+# and turn one round trip into two.
+#
+#   frontend             typecheck + build + unit tests        required
+#   backend              vet + build + unit tests (-race)      required
+#   backend-integration  the same suite against real Postgres  required (see note)
+#   security             dependency vulns + committed secrets  required
+#
+# BOOTSTRAP - both of these are one-time and neither can be done from here:
+#   1. `cd frontend && npm install` on a machine with Node 20+, then commit the
+#      resulting package-lock.json. The `frontend` job uses `npm ci`, which
+#      REQUIRES a lockfile and fails immediately without one. This is not
+#      papered over with `npm install`: `npm ci` is what makes CI install the
+#      exact tree a developer tested, and swapping it out to get a green tick
+#      would quietly discard that guarantee.
+#   2. `cd backend && go mod tidy` on a machine with Go 1.24, then commit
+#      go.sum. Without it, `go mod download` cannot verify module checksums and
+#      `actions/setup-go`'s cache key has no file to hash.
+#
+# THIS IS NOT A DEPLOY GATE, and it is worth being blunt about that. Vercel's
+# Git integration builds on push, independently of GitHub Actions, so a red run
+# here does NOT by itself stop a deployment. To make "deploy only after checks
+# pass" actually true, use Vercel's Ignored Build Step or require these checks on
+# `main` via branch protection - branch protection being the stronger of the two,
+# because it moves the gate to the merge rather than to the build. See
+# docs/DEPLOYMENT.md section 1.
+#
+# ACTION PINNING: actions are pinned to a major tag (`@v4`). That still trusts
+# the tag owner to not move it maliciously. Pinning to a full commit SHA
+# (`uses: actions/checkout@8f4b7f8...`) removes that trust and is the stronger
+# choice; it costs a Dependabot PR every few weeks to keep current, which is
+# why `.github/dependabot.yml` has a `github-actions` entry.
+# =============================================================================
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # Manual trigger. Needed because `bootstrap-lockfiles.yml` commits the
+  # lockfiles using GITHUB_TOKEN, and GitHub deliberately does not fire workflows
+  # for pushes made with that token (it is the loop guard). So the first CI run
+  # after bootstrapping has to be started by hand from the Actions tab.
+  workflow_dispatch:
+
+# Least privilege at the workflow level. No job here writes to the repository,
+# publishes a package, or comments on a PR, so read access to contents is the
+# entire requirement. Any job that later needs more should request it in the
+# job's own `permissions:` block, not by widening this one.
+permissions:
+  contents: read
+
+# One in-flight run per ref. Pushing a fixup cancels the superseded run instead
+# of queueing behind it.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Node 22, not 20. On 2026-08-22 a real `npm install` (on the EC2 test host,
+  # projects/2026-08-22-job-paglu-e2e-ec2) emitted:
+  #   npm warn EBADENGINE package: 'undici@8.10.0'
+  #   npm warn EBADENGINE required: { node: '>=22.19.0' }
+  #   npm warn EBADENGINE current:  { node: 'v20.20.2' }
+  # It installed and every test passed, so this is not yet breaking -- but a
+  # transitive dependency that already declares it needs 22 will stop tolerating
+  # 20 without warning, and CI pinned to 20 would fail on a day nothing changed
+  # in this repository.
+  NODE_VERSION: "22"
+  GO_VERSION: "1.24"
+
+jobs:
+
+  # ---------------------------------------------------------------------------
+  # Frontend: Astro + TypeScript
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: frontend (node 20)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          # Keyed on the lockfile, not on package.json: the lockfile is what
+          # determines the installed tree, so it is the only correct cache key.
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies (npm ci)
+        # Fails loudly and correctly if package-lock.json is missing. See
+        # BOOTSTRAP in the header - that is the fix, not a different command.
+        run: npm ci
+
+      - name: Typecheck (astro check)
+        # `astro check` runs the Astro language server over .astro files as well
+        # as tsc over .ts/.tsx, so it catches things `tsc --noEmit` alone cannot
+        # (unused props, bad component attributes, template-level type errors).
+        run: npm run check
+
+      - name: Build
+        # `npm run build` is `astro check && astro build`, so it re-runs the
+        # step above. Kept because a passing `check` and a passing `build` are
+        # what the repository documents as the gate, and the duplicated check
+        # takes seconds. If CI minutes ever matter, `npm run build:nocheck`
+        # exists for exactly this and can replace this line.
+        run: npm run build
+        env:
+          # CI placeholders. The build must not need a reachable API: the pages
+          # that are prerendered at build time (home shell, 404, legal) do not
+          # fetch, and anything that genuinely needs live data is SSR and runs
+          # at request time. If the build starts failing here with a network
+          # error, the correct fix is to make that page SSR - not to point this
+          # at a real API.
+          PUBLIC_API_BASE_URL: http://127.0.0.1:8080
+          API_BASE_URL: http://127.0.0.1:8080
+          SITE_URL: https://jobpaglu.com
+          APP_ENV: production
+
+      - name: Unit tests (vitest)
+        # Deliberately NOT `-- --passWithNoTests`. Vitest exits non-zero when it
+        # finds no test files, and that is the correct signal: T-11 in the test
+        # plan requires component tests, so "there are no tests" must be a red
+        # build rather than a silent green one.
+        run: npm run test
+
+  # ---------------------------------------------------------------------------
+  # Backend: Go unit tests. No database.
+  # ---------------------------------------------------------------------------
+  backend:
+    name: backend (go 1.24)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          # Caches the module download cache and the build cache. Keyed on
+          # go.sum; see BOOTSTRAP if this step errors about a missing file.
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Download modules
+        run: go mod download
+
+      - name: Verify go.mod / go.sum are tidy
+        # Catches the case where someone adds an import and commits without
+        # running `go mod tidy`, which would break every later clone.
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum \
+            || { echo "::error::go.mod/go.sum are not tidy. Run 'go mod tidy' in backend/ and commit the result."; exit 1; }
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      - name: Unit tests
+        # -race catches the data races that a request-scoped codebase with a
+        # rate limiter and a session cache is genuinely exposed to; they are the
+        # bugs that never reproduce locally. -count=1 disables the test result
+        # cache so a green run always means the tests actually executed.
+        run: go test ./... -race -count=1
+
+  # ---------------------------------------------------------------------------
+  # Backend integration: the same code against a real PostgreSQL 17.
+  # ---------------------------------------------------------------------------
+  # DECISION: this job is REQUIRED for merge, not optional.
+  #
+  # Reasoning: the tests behind `-tags=integration` are T-5 through T-9 in the
+  # test plan - unauthenticated admin access, CSRF rejection, draft
+  # invisibility, publish/unpublish transitions, login rate limiting. Those are
+  # the access-control tests. A job that is allowed to fail is a job that will
+  # eventually be failing, and "authorisation is broken but the build is green"
+  # is the exact outcome worth spending a service container to avoid.
+  #
+  # The cost of that choice is honest: this is the only job that needs a
+  # database, so it is the slowest and the one most able to fail for
+  # infrastructure reasons rather than code reasons. If it becomes flaky, fix
+  # the flake - do not add `continue-on-error: true`.
+  backend-integration:
+    name: backend-integration (postgres 17)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          # Throwaway credentials for an ephemeral container that exists for the
+          # length of one job and is reachable only from this runner. Named so
+          # that nobody can mistake them for a real credential, and so a secret
+          # scanner's finding here is obviously a false positive.
+          POSTGRES_USER: ci_ephemeral
+          POSTGRES_PASSWORD: ci_ephemeral_not_a_secret
+          POSTGRES_DB: jobpaglu_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci_ephemeral -d jobpaglu_test -q"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+          --health-start-period 10s
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Download modules
+        run: go mod download
+
+      - name: Integration tests
+        # The suite is responsible for its own schema: it applies the embedded
+        # migrations (decision D-7) against TEST_DATABASE_URL before running.
+        # There is no separate migrate binary to invoke here.
+        run: go test -tags=integration -count=1 ./...
+        env:
+          TEST_DATABASE_URL: postgres://ci_ephemeral:ci_ephemeral_not_a_secret@localhost:5432/jobpaglu_test?sslmode=disable
+          APP_ENV: development
+          # Obviously-fake, CI-only, and never reusable - it is in a public
+          # repository. It has to thread a needle: internal/config/config.go
+          # requires >= 32 characters AND rejects anything containing a template
+          # marker (`placeholder`, `example`, `sample`, `dummy`, `changeme`,
+          # `generate`, ...), so the value below is deliberately worded to say
+          # what it is without tripping that check. If this job starts failing
+          # with "still looks like the .env.example placeholder", a marker word
+          # has crept in here.
+          ADMIN_SESSION_SECRET: ci-throwaway-value-not-used-outside-this-job-0000
+          FRONTEND_URL: http://localhost:4321
+          ALLOW_HTTP_APPLY_URLS: "false"
+          LOG_LEVEL: warn
+
+  # ---------------------------------------------------------------------------
+  # Security: dependency vulnerabilities and committed secrets.
+  # ---------------------------------------------------------------------------
+  security:
+    name: security
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history. A secret scanner that only sees the tip commit misses
+          # the case that matters most: a credential that was committed, noticed,
+          # and "removed" in a later commit while staying in the history.
+          fetch-depth: 0
+
+      # ---- Go: known vulnerabilities in the dependency graph ----------------
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Install govulncheck
+        # `@latest` is used knowingly: this is a scanner, and an out-of-date
+        # scanner is worse than a moving one. Pin it (`@v1.1.4`) if a
+        # reproducible security report is ever needed for an audit.
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: govulncheck
+        working-directory: backend
+        # govulncheck is call-graph aware: it reports a CVE only when the
+        # vulnerable symbol is actually reachable from this code. That is why it
+        # is allowed to fail the build while `npm audit` below is not - its
+        # findings are nearly always genuinely actionable.
+        run: govulncheck ./...
+
+      # ---- Node: known vulnerabilities in the dependency graph --------------
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: npm audit (informational, never fails the build)
+        working-directory: frontend
+        # Printed first so a reviewer can see the full picture, including the
+        # low and moderate advisories that the gate below ignores.
+        continue-on-error: true
+        run: npm audit --audit-level=low || true
+
+      - name: npm audit (gate at high)
+        working-directory: frontend
+        # THRESHOLD: high. Justification, because an unjustified threshold gets
+        # argued about and then disabled:
+        #
+        #   * npm audit reports the whole transitive dev tree. A large share of
+        #     its findings are in build-time tooling (bundler, test runner) and
+        #     are not reachable by any request a visitor can make.
+        #   * Unlike govulncheck it has no reachability analysis, so it cannot
+        #     tell "the vulnerable function is called" from "the package is
+        #     present". At `low` or `moderate` this job would be red most weeks
+        #     for reasons nobody can act on.
+        #   * A gate that is red for reasons nobody can act on gets deleted, and
+        #     then the high and critical findings - the ones that matter - stop
+        #     being noticed too.
+        #
+        # So: high and critical block the merge; low and moderate are visible in
+        # the step above and are handled by the Dependabot PRs configured in
+        # .github/dependabot.yml.
+        run: npm audit --audit-level=high
+
+      # ---- Committed secrets ----------------------------------------------
+      - name: gitleaks (committed secret scan)
+        # Run as a container rather than via gitleaks/gitleaks-action@v2: the
+        # action requires a GITLEAKS_LICENSE secret for organisation-owned
+        # repositories, and `github.com/job-paglu/homepage` is org-owned. The
+        # container has no such restriction and needs no secret, which also
+        # means this step works on a fork's PR.
+        #
+        # --redact: findings are reported with the matched value masked, so a
+        # leaked credential is not then republished in a public build log.
+        # --no-banner keeps the output readable.
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/repo:ro" \
+            zricethezav/gitleaks:v8.28.0 \
+            detect --source=/repo --redact --no-banner --exit-code=1 --verbose
+
+      # ---- Repository hygiene ---------------------------------------------
+      - name: No committed .env files
+        # Cheap, specific, and independent of gitleaks' rule set. `.env.example`
+        # and `frontend/.env.example` are the only permitted matches; anything
+        # else means .gitignore was bypassed with `git add -f`.
+        run: |
+          set -euo pipefail
+          offenders="$(git ls-files \
+            | grep -E '(^|/)(\.env|\.env\..*|\.dev\.vars)$' \
+            | grep -vE '(^|/)\.env\.example$' \
+            | grep -vE '(^|/)\.dev\.vars\.example$' || true)"
+          if [ -n "$offenders" ]; then
+            echo "::error::Environment files are committed:"
+            echo "$offenders"
+            exit 1
+          fi
+          echo "No committed environment files."

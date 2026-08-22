@@ -1,0 +1,29 @@
+# Keep the build context to source only. A smaller context is a faster upload
+# to Cloud Build and removes any chance of a local .env reaching an image layer.
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+
+# Nothing outside backend/ is needed to build the binary.
+../frontend
+../docs
+../scripts
+
+# Test and tooling output
+*.test
+coverage.out
+*.out
+bin/
+dist/
+
+# Editor / OS noise
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Docs do not belong in a layer
+*.md
+!tests/README.md

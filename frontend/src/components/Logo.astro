@@ -1,0 +1,71 @@
+---
+/**
+ * The Job Paglu wordmark.
+ *
+ * Text plus one deliberately trivial glyph: a circle with a single meridian —
+ * a globe reduced to the fewest strokes that still read as one at 16px. No
+ * image request, no web font, no layout shift, and it inherits `currentColor`
+ * so the same component works on paper and on the emerald footer.
+ *
+ * The two-tone treatment (ink + emerald) is what makes it a lockup rather than
+ * a heading, and is deliberately unlike the blue single-weight wordmarks of
+ * LinkedIn / Indeed / Glassdoor / We Work Remotely.
+ */
+import styles from '@styles/logo.module.css';
+import { copy } from '@lib/copy';
+import { ROUTES } from '@lib/urls';
+
+interface Props {
+  /** Target for the home link. `false` renders a non-link mark. */
+  href?: string | false;
+  size?: 'md' | 'lg';
+  /** Light-on-dark treatment for the emerald footer. */
+  inverse?: boolean;
+  /** Force a `<span>` — for use inside a heading that is already a link. */
+  as?: 'a' | 'span';
+}
+
+const { href = ROUTES.home, size = 'md', inverse = false, as } = Astro.props;
+
+const Tag = as ?? (href === false ? 'span' : 'a');
+/**
+ * Narrowed in one place so `href` can never reach the template as `false` and
+ * be rendered as the literal string "false".
+ */
+const linkHref = Tag === 'a' && href !== false ? href : undefined;
+
+/**
+ * Joined by hand rather than with `class:list`: the tag here is dynamic, and a
+ * plain `class` string is the one form that is unambiguous for both an element
+ * and a component render.
+ */
+const classes = [styles.logo, size === 'lg' ? styles.lg : null, inverse ? styles.inverse : null]
+  .filter((value): value is string => typeof value === 'string')
+  .join(' ');
+---
+
+<Tag
+  class={classes}
+  href={linkHref}
+  aria-label={linkHref === undefined ? undefined : copy.nav.logoHome}
+>
+  {/* Decorative: the wordmark beside it already carries the accessible name. */}
+  <svg
+    class={styles.glyph}
+    viewBox="0 0 20 20"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.6"
+    stroke-linecap="round"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <circle cx="10" cy="10" r="8"></circle>
+    <path d="M10 2c3 2.6 3 12.8 0 16M2 10h16"></path>
+  </svg>
+  <span>
+    <span class={styles.first}>{copy.site.wordmarkFirst}</span>{' '}<span
+      class={styles.second}>{copy.site.wordmarkSecond}</span
+    ></span
+  >
+</Tag>

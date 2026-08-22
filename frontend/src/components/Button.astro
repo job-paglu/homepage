@@ -1,0 +1,95 @@
+---
+/**
+ * The one button surface on the site.
+ *
+ * Renders an `<a>` when it navigates and a `<button>` when it acts — the two
+ * are not interchangeable to a keyboard or a screen reader, so the element is
+ * chosen by whether `href` is present rather than by a `role` prop.
+ *
+ * There is no `disabled` link branch: `aria-disabled` on an `<a href>` still
+ * navigates. A caller that needs a non-actionable primary control renders its
+ * own inert element (see ApplyButton.astro).
+ */
+import styles from '@styles/button.module.css';
+
+interface Props {
+  href?: string | undefined;
+  variant?: 'primary' | 'quiet' | 'ghost';
+  size?: 'sm' | 'md' | 'lg';
+  /** Full-width; used at narrow widths where two side-by-side buttons wrap. */
+  full?: boolean;
+  type?: 'button' | 'submit';
+  disabled?: boolean;
+  /** Adds target/rel and the outbound glyph. Only ever true for external hosts. */
+  external?: boolean;
+  class?: string | undefined;
+  id?: string | undefined;
+  'aria-label'?: string | undefined;
+  'aria-current'?: 'page' | undefined;
+  'aria-describedby'?: string | undefined;
+}
+
+const {
+  href,
+  variant = 'primary',
+  size = 'md',
+  full = false,
+  type = 'button',
+  disabled = false,
+  external = false,
+  class: className,
+  ...rest
+} = Astro.props;
+
+const classes = [
+  styles.base,
+  styles[variant],
+  size === 'sm' && styles.sm,
+  size === 'lg' && styles.lg,
+  full && styles.full,
+  disabled && styles.disabled,
+  className,
+];
+
+/**
+ * `nofollow` as well as `noopener noreferrer`: outbound apply links are
+ * untrusted third-party destinations and must not pass link equity
+ * (contract section 7).
+ *
+ * A single object shape with `undefined` values rather than a union of `{}` and
+ * `{target, rel}`: Astro drops attributes whose value is `undefined`, and one
+ * stable shape keeps the spread's type simple.
+ */
+const externalAttrs = {
+  target: external ? '_blank' : undefined,
+  rel: external ? 'noopener noreferrer nofollow' : undefined,
+};
+---
+
+{
+  href !== undefined && !disabled ? (
+    <a href={href} class:list={classes} {...externalAttrs} {...rest}>
+      <slot />
+      {external && (
+        <svg
+          class={styles.icon}
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path d="M6 3H3.8A.8.8 0 0 0 3 3.8v8.4a.8.8 0 0 0 .8.8h8.4a.8.8 0 0 0 .8-.8V10" />
+          <path d="M10 2.5h3.5V6M13 3l-6 6" />
+        </svg>
+      )}
+    </a>
+  ) : (
+    <button type={type} disabled={disabled} class:list={classes} {...rest}>
+      <slot />
+    </button>
+  )
+}

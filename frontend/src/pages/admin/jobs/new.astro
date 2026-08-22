@@ -1,0 +1,16 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+import JobForm from '@components/admin/JobForm';
+
+export const prerender = false;
+
+Astro.response.headers.set('Cache-Control', 'no-store');
+---
+
+<AdminLayout
+  title="New job"
+  heading="New job"
+  lede="Seven fields are required. The job is saved as a draft; publish it from the job list once it reads the way you want."
+>
+  <JobForm client:load />
+</AdminLayout>

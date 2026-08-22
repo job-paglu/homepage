@@ -1,0 +1,128 @@
+/* Shared button surface, used by Button.astro and therefore by every CTA,
+   card action and apply link. One file so a focus ring or a touch-target fix
+   lands everywhere at once. */
+
+.base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--jp-space-2);
+  /* min-height rather than height: a wrapped label must grow the control, not
+     overflow it. 44px floor is non-negotiable (request section 27). */
+  min-height: var(--jp-control-h);
+  padding-inline: var(--jp-space-5);
+  padding-block: var(--jp-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--jp-radius-md);
+  font-size: var(--jp-text-base);
+  font-weight: var(--jp-weight-semibold);
+  letter-spacing: var(--jp-tracking-snug);
+  line-height: var(--jp-leading-snug);
+  text-align: center;
+  text-decoration: none;
+  /* Labels are copy-driven and translatable; a long one must wrap rather than
+     force the button wider than its column. */
+  overflow-wrap: anywhere;
+  min-width: 0;
+  transition:
+    background-color var(--jp-duration-fast) var(--jp-ease),
+    border-color var(--jp-duration-fast) var(--jp-ease),
+    color var(--jp-duration-fast) var(--jp-ease),
+    transform var(--jp-duration-fast) var(--jp-ease);
+}
+
+.base:active {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .base:active {
+    transform: none;
+  }
+}
+
+/* --- Sizes ---------------------------------------------------------------- */
+
+.sm {
+  min-height: var(--jp-control-h);
+  padding-inline: var(--jp-space-4);
+  font-size: var(--jp-text-sm);
+}
+
+.lg {
+  min-height: var(--jp-control-h-lg);
+  padding-inline: var(--jp-space-6);
+  font-size: var(--jp-text-md);
+}
+
+.full {
+  width: 100%;
+}
+
+/* --- Variants ------------------------------------------------------------- */
+
+/* Emerald on white: 7.6:1 for the inverse label (tokens.css contrast notes). */
+.primary {
+  background-color: var(--jp-brand);
+  border-color: var(--jp-brand);
+  color: var(--jp-ink-inverse);
+}
+
+.primary:hover {
+  background-color: var(--jp-brand-hover);
+  border-color: var(--jp-brand-hover);
+  color: var(--jp-ink-inverse);
+}
+
+.primary:active {
+  background-color: var(--jp-brand-active);
+  border-color: var(--jp-brand-active);
+}
+
+/* "Primary-quiet": the same weight of intent, none of the colour weight, so a
+   card can carry two actions without them competing. The border is
+   --jp-border-strong because it is the only thing defining the control's
+   bounds, which makes it meaningful rather than decorative (3.1:1). */
+.quiet {
+  background-color: var(--jp-surface);
+  border-color: var(--jp-border-strong);
+  color: var(--jp-brand);
+}
+
+.quiet:hover {
+  background-color: var(--jp-brand-wash);
+  border-color: var(--jp-brand);
+  color: var(--jp-brand-active);
+}
+
+.ghost {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--jp-brand);
+  padding-inline: var(--jp-space-3);
+}
+
+.ghost:hover {
+  background-color: var(--jp-brand-wash);
+}
+
+/* --- Disabled ------------------------------------------------------------- */
+
+/* Applied to a <button disabled> or to a non-interactive <span>. Never to an
+   <a>: a disabled link is not a thing, so ApplyButton renders a span instead. */
+.disabled,
+.base:disabled {
+  background-color: var(--jp-surface-sunken);
+  border-color: var(--jp-border);
+  color: var(--jp-ink-muted);
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* --- Icon slot ------------------------------------------------------------ */
+
+.icon {
+  flex: none;
+  width: 1em;
+  height: 1em;
+}

@@ -1,0 +1,19 @@
+---
+/**
+ * /admin has no content of its own; the dashboard starts at the job list.
+ *
+ * A `Response` is returned directly rather than using `Astro.redirect`, so
+ * `Cache-Control: no-store` travels with the redirect. A cached 302 to an admin
+ * route is harmless, but a cached anything under /admin is a habit worth not
+ * forming.
+ */
+export const prerender = false;
+
+return new Response(null, {
+  status: 302,
+  headers: {
+    Location: '/admin/jobs',
+    'Cache-Control': 'no-store',
+  },
+});
+---

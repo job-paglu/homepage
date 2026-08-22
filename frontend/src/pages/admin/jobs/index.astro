@@ -1,0 +1,29 @@
+---
+/**
+ * Job list.
+ *
+ * The shell is server-rendered and carries no data. The island fetches
+ * `/api/admin/jobs` from the browser — same origin, so Cloudflare Access's
+ * `CF_Authorization` cookie is attached automatically. It is NOT fetched
+ * server-side here (unlike the public pages, which read D1 directly): the
+ * dashboard is interactive, so the data has to be refetched on every filter and
+ * page change without a reload, and that has to happen in the browser regardless.
+ *
+ * The access control is `requireAdmin` on the API route, not anything here; see
+ * `src/lib/adminIdentity.ts`.
+ */
+import AdminLayout from '@layouts/AdminLayout.astro';
+import JobsTable from '@components/admin/JobsTable';
+
+export const prerender = false;
+
+Astro.response.headers.set('Cache-Control', 'no-store');
+---
+
+<AdminLayout
+  title="Jobs"
+  heading="Jobs"
+  lede="Every listing on the public site comes from this table. Drafts and unpublished jobs are invisible to visitors."
+>
+  <JobsTable client:load />
+</AdminLayout>

@@ -1,0 +1,136 @@
+/* Announcement dialog.
+   -----------------------------------------------------------------------------
+   Hidden in the HTML, revealed by script — the reverse of the usual pattern. If
+   the script throws, the visitor gets a page with no overlay rather than an
+   overlay with no way to dismiss it. Never rely on CSS alone to hide this. */
+
+.root[hidden] {
+  display: none;
+}
+
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: var(--jp-z-modal);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: var(--jp-gutter);
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(11, 13, 16, 0.48);
+  animation: fade-in var(--jp-duration-base) var(--jp-ease);
+}
+
+.dialog {
+  position: relative;
+  width: 100%;
+  max-width: 30rem;
+  /* Never taller than the viewport: at 320x480 landscape this body copy is
+     genuinely long, so the dialog scrolls internally rather than pushing its
+     own close button off-screen. */
+  max-height: calc(100svh - 2 * var(--jp-gutter));
+  overflow-y: auto;
+  padding: var(--jp-space-6);
+  border-radius: var(--jp-radius-xl);
+  background-color: var(--jp-surface);
+  box-shadow: var(--jp-shadow-lg);
+  animation: rise var(--jp-duration-slow) var(--jp-ease-out);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--jp-space-2);
+  margin-bottom: var(--jp-space-3);
+  padding: 2px var(--jp-space-2);
+  border-radius: var(--jp-radius-pill);
+  /* Amber background carrying --jp-ink: 9.1:1, the token's sanctioned use. */
+  background-color: var(--jp-accent);
+  color: var(--jp-ink);
+  font-size: var(--jp-text-2xs);
+  font-weight: var(--jp-weight-bold);
+  letter-spacing: var(--jp-tracking-caps);
+  text-transform: uppercase;
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--jp-text-xl);
+  font-weight: var(--jp-weight-bold);
+  letter-spacing: var(--jp-tracking-snug);
+}
+
+.body {
+  margin: var(--jp-space-3) 0 0;
+  color: var(--jp-ink-soft);
+  font-size: var(--jp-text-base);
+  line-height: var(--jp-leading-relaxed);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--jp-space-6);
+}
+
+/* A real <button>, at the touch floor, with a visible label rather than a bare
+   glyph — "×" alone is a 12px target with no accessible name. */
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--jp-space-2);
+  min-height: var(--jp-control-h);
+  min-width: var(--jp-touch-min);
+  padding-inline: var(--jp-space-5);
+  border: 1px solid var(--jp-brand);
+  border-radius: var(--jp-radius-md);
+  background-color: var(--jp-brand);
+  color: var(--jp-ink-inverse);
+  font-size: var(--jp-text-base);
+  font-weight: var(--jp-weight-semibold);
+}
+
+.close:hover {
+  background-color: var(--jp-brand-hover);
+  border-color: var(--jp-brand-hover);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .dialog {
+    animation: none;
+  }
+}
+
+/* Centre it once there is vertical room; bottom-sheet placement on a phone puts
+   the dismiss control under the thumb. */
+@media (min-width: 600px) {
+  .root {
+    align-items: center;
+  }
+}

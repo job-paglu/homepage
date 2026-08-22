@@ -1,0 +1,47 @@
+---
+/**
+ * Dashboard navigation.
+ *
+ * Two entries. There is no analytics view, no settings page and no widget
+ * shelf, because none exists — a nav advertising pages that 404 is worse than a
+ * short nav.
+ */
+interface Props {
+  currentPath: string;
+}
+
+const { currentPath } = Astro.props;
+
+const links = [
+  { href: '/admin/jobs', label: 'Jobs' },
+  { href: '/admin/jobs/new', label: 'New job' },
+] as const;
+
+/**
+ * `/admin/jobs/new` and `/admin/jobs/{id}/edit` are both "under" the list, so an
+ * exact match is not enough. `new` wins outright; everything else under
+ * `/admin/jobs` marks the list as current.
+ */
+function isCurrent(href: string): boolean {
+  if (href === '/admin/jobs/new') return currentPath === '/admin/jobs/new';
+  return currentPath === '/admin/jobs' || (currentPath.startsWith('/admin/jobs/') && currentPath !== '/admin/jobs/new');
+}
+---
+
+<nav class="jpa-nav" aria-label="Dashboard">
+  <ul>
+    {
+      links.map((link) => (
+        <li>
+          <a
+            class="jpa-nav__link"
+            href={link.href}
+            aria-current={isCurrent(link.href) ? 'page' : undefined}
+          >
+            {link.label}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>

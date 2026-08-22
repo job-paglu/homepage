@@ -1,0 +1,150 @@
+# =============================================================================
+# Job Paglu - Dependabot configuration
+# -----------------------------------------------------------------------------
+# Purpose: keep dependencies current with small, reviewable pull requests, so
+# that a security update is a routine bump rather than an emergency.
+#
+# This is the companion to ci.yml's `security` job. That job TELLS you a
+# dependency is vulnerable; Dependabot OPENS THE PULL REQUEST that fixes it, and
+# CI then proves the fix does not break anything. Neither half is much use
+# without the other.
+#
+# Grouping policy, stated once: patch and minor updates are grouped into a
+# single PR per ecosystem, because reviewing twelve individual patch bumps is
+# performative rather than useful. Major updates are always separate and
+# ungrouped - a major is a breaking change by definition and deserves its own
+# diff, its own CI run, and its own read of the changelog.
+#
+# Security updates ignore the grouping and the schedule entirely: Dependabot
+# raises those immediately and individually, which is correct.
+# =============================================================================
+
+version: 2
+
+updates:
+
+  # ---------------------------------------------------------------------------
+  # Frontend - npm
+  # ---------------------------------------------------------------------------
+  # Requires frontend/package-lock.json to exist. Until it is committed (see
+  # scripts/README.md, first-run notes) Dependabot has nothing to resolve
+  # against and will silently do nothing for this ecosystem.
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "frontend"]
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: scope
+    groups:
+      astro-and-friends:
+        # Astro, its adapter and its React integration are version-coupled: the
+        # Vercel adapter and @astrojs/react track the Astro major. Bumping
+        # one alone is how you get a build that fails for a reason that looks
+        # unrelated. Group them so they always move together.
+        patterns:
+          - "astro"
+          - "@astrojs/*"
+        update-types: ["minor", "patch"]
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+        update-types: ["minor", "patch"]
+      dev-tooling:
+        patterns:
+          - "typescript"
+          - "vitest"
+          - "@vitest/*"
+        update-types: ["minor", "patch"]
+    # No `ignore:` block. Majors are intentionally NOT held back - they get
+    # their own ungrouped PR, which is the point. If something ever has to be
+    # pinned, add `ignore:` here WITH a comment saying why and when to revisit;
+    # an unexplained ignore rule outlives everyone who understood it.
+
+  # ---------------------------------------------------------------------------
+  # Backend - Go modules
+  # ---------------------------------------------------------------------------
+  # Requires backend/go.sum. Total direct dependencies are 2 (pgx/v5 and
+  # golang.org/x/crypto), by design (decision D-5), so this will be quiet - and
+  # that quiet is the signal that the dependency budget is being respected.
+  - package-ecosystem: gomod
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "backend"]
+    commit-message:
+      prefix: "chore(deps)"
+      include: scope
+    groups:
+      go-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # ---------------------------------------------------------------------------
+  # GitHub Actions
+  # ---------------------------------------------------------------------------
+  # This entry is what makes SHA-pinning actions practical. ci.yml and codeql.yml
+  # pin to a major tag today; if they are tightened to full commit SHAs (which is
+  # the stronger posture, noted in ci.yml's header), Dependabot is the thing that
+  # keeps those SHAs from going stale. Without this entry, SHA-pinning quietly
+  # becomes "frozen on a two-year-old action".
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "ci"]
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # ---------------------------------------------------------------------------
+  # Container base images
+  # ---------------------------------------------------------------------------
+  # /backend picks up backend/Dockerfile (owned by the backend side of the repo -
+  # this file only asks Dependabot to watch it). A stale Go or distroless base
+  # image is one of the easiest ways to ship a known CVE that govulncheck cannot
+  # see, because govulncheck analyses the module graph, not the OS layer.
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "docker"]
+    commit-message:
+      prefix: "chore(docker)"
+
+  # /  picks up docker-compose.yml (postgres:17-alpine, node:20-alpine). These
+  # are local-development images only and never reach production, so a bump here
+  # is low-risk - but keeping the local Postgres major aligned with Neon's is
+  # exactly how you avoid "the migration worked on my machine".
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    labels: ["dependencies", "docker", "local-dev"]
+    commit-message:
+      prefix: "chore(docker)"

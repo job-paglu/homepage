@@ -1,0 +1,168 @@
+/* Hamburger + panel, under 900px only. The whole component is display:none at
+   desktop widths so the panel markup cannot be reached by the Tab key there. */
+
+.wrap {
+  display: contents;
+}
+
+@media (min-width: 900px) {
+  .wrap {
+    display: none;
+  }
+}
+
+/* --- Trigger -------------------------------------------------------------- */
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--jp-control-h);
+  height: var(--jp-control-h);
+  border: 1px solid var(--jp-border-strong);
+  border-radius: var(--jp-radius-md);
+  background-color: var(--jp-surface);
+  color: var(--jp-ink);
+}
+
+.trigger:hover {
+  background-color: var(--jp-surface-sunken);
+}
+
+@media (min-width: 900px) {
+  .trigger {
+    display: none;
+  }
+}
+
+.bars {
+  position: relative;
+  width: 18px;
+  height: 12px;
+}
+
+.bar {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  border-radius: var(--jp-radius-pill);
+  background-color: currentColor;
+  transition:
+    transform var(--jp-duration-base) var(--jp-ease),
+    opacity var(--jp-duration-fast) var(--jp-ease);
+}
+
+.bar:nth-child(1) {
+  top: 0;
+}
+.bar:nth-child(2) {
+  top: 5px;
+}
+.bar:nth-child(3) {
+  top: 10px;
+}
+
+/* Morph to an X while open. Driven by aria-expanded, which is the same
+   attribute assistive technology reads — one source of truth, so the icon can
+   never disagree with what a screen reader announces. */
+.trigger[aria-expanded='true'] .bar:nth-child(1) {
+  transform: translateY(5px) rotate(45deg);
+}
+.trigger[aria-expanded='true'] .bar:nth-child(2) {
+  opacity: 0;
+}
+.trigger[aria-expanded='true'] .bar:nth-child(3) {
+  transform: translateY(-5px) rotate(-45deg);
+}
+
+/* --- Panel ---------------------------------------------------------------- */
+
+.panel {
+  position: fixed;
+  inset: var(--jp-header-h) 0 auto 0;
+  z-index: var(--jp-z-menu);
+  max-height: calc(100svh - var(--jp-header-h));
+  overflow-y: auto;
+  padding: var(--jp-space-4) var(--jp-gutter) var(--jp-space-6);
+  background-color: var(--jp-surface);
+  border-bottom: 1px solid var(--jp-border);
+  box-shadow: var(--jp-shadow-lg);
+  animation: slide-in var(--jp-duration-base) var(--jp-ease-out);
+}
+
+/* Higher specificity than `.panel` so no `!important` is needed. The script
+   toggles the `hidden` attribute; nothing here reads an inline style. */
+.panel[hidden] {
+  display: none;
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+}
+
+.panelList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jp-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.panelLink {
+  display: flex;
+  align-items: center;
+  /* Full-width rows at the touch floor: the most common mobile-nav failure is a
+     20px-tall text link that needs three attempts to hit. */
+  min-height: var(--jp-touch-min);
+  padding: var(--jp-space-2) var(--jp-space-3);
+  border-radius: var(--jp-radius-md);
+  color: var(--jp-ink);
+  font-size: var(--jp-text-md);
+  font-weight: var(--jp-weight-medium);
+  text-decoration: none;
+}
+
+.panelLink:hover {
+  background-color: var(--jp-surface-sunken);
+}
+
+.panelLink[aria-current='page'] {
+  background-color: var(--jp-brand-wash);
+  color: var(--jp-brand-active);
+  font-weight: var(--jp-weight-semibold);
+}
+
+.panelCta {
+  margin-top: var(--jp-space-4);
+}
+
+/* Dims the page behind the panel. Not a click target — the panel is anchored to
+   the header, so tapping outside it hits this and the script closes the menu. */
+.scrim {
+  position: fixed;
+  inset: var(--jp-header-h) 0 0 0;
+  /* Below the panel (--jp-z-menu) on purpose, and it starts below the header so
+     the sticky bar is never dimmed. */
+  z-index: var(--jp-z-sticky);
+  background-color: rgba(11, 13, 16, 0.32);
+}
+
+.scrim[hidden] {
+  display: none;
+}

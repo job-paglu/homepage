@@ -1,0 +1,60 @@
+/* The wordmark. A text treatment plus one trivially simple glyph — no image
+   request, no font download, legible from 15px up, and it inherits currentColor
+   so it works on paper and on the emerald footer without a second asset. */
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--jp-space-2);
+  min-width: 0;
+  color: var(--jp-ink);
+  font-size: var(--jp-text-lg);
+  font-weight: var(--jp-weight-bold);
+  /* Tight tracking is what separates a wordmark from a heading. */
+  letter-spacing: -0.03em;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.logo:hover {
+  color: var(--jp-ink);
+}
+
+.glyph {
+  flex: none;
+  width: 1.05em;
+  height: 1.05em;
+  /* Emerald mark against ink text: the one place the brand colour appears in
+     the header, which is what makes it read as a mark and not as a link. */
+  color: var(--jp-brand);
+  overflow: visible;
+}
+
+.first {
+  color: inherit;
+}
+
+/* The second word carries the brand colour, so "Job Paglu" reads as one
+   two-tone lockup rather than two words. 7.6:1 on paper. */
+.second {
+  color: var(--jp-brand);
+}
+
+.lg {
+  font-size: var(--jp-text-2xl);
+}
+
+/* On the emerald footer everything inverts; the glyph and second word would
+   otherwise disappear into the background. --jp-brand-tint, not --jp-accent:
+   amber is a background token and must never colour text (tokens.css). Tint on
+   emerald-900 measures 10.5:1. */
+.inverse,
+.inverse:hover {
+  color: var(--jp-ink-inverse);
+}
+
+.inverse .second,
+.inverse .glyph {
+  color: var(--jp-brand-tint);
+}

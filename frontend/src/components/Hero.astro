@@ -1,0 +1,45 @@
+---
+/**
+ * Home hero. Carries the page's single `<h1>`.
+ *
+ * The background is two soft radial gradients, not an image: nothing to
+ * download, nothing to lay out, no LCP cost, and it still gives the page a top
+ * that looks designed. The headline is one sentence in ink and one in emerald,
+ * which is the whole visual idea — no hero photo of a laptop on a beach.
+ */
+import Button from '@components/Button.astro';
+import styles from '@styles/hero.module.css';
+import { copy } from '@lib/copy';
+import { ROUTES } from '@lib/urls';
+
+interface Props {
+  /** Anchor for the secondary CTA — the latest-jobs section on this page. */
+  latestSectionId?: string;
+}
+
+const { latestSectionId = 'latest-jobs' } = Astro.props;
+---
+
+<section class={styles.hero}>
+  <div class:list={['jp-container', styles.inner]}>
+    <p class={styles.eyebrow}>{copy.home.heroEyebrow}</p>
+
+    <h1 class={styles.headline}>
+      {copy.home.heroHeadlineLead}{' '}
+      <span class={styles.headlineAccent}>{copy.home.heroHeadlineAccent}</span>
+    </h1>
+
+    <p class={styles.support}>{copy.home.heroSupport}</p>
+
+    <div class={styles.actions}>
+      <Button href={ROUTES.jobs} variant="primary" size="lg" class={styles.action}>
+        {copy.home.heroPrimaryCta}
+      </Button>
+      {/* Same-page anchor: the latest roles are already server-rendered further
+          down, so this is a scroll rather than a second request. */}
+      <Button href={`#${latestSectionId}`} variant="quiet" size="lg" class={styles.action}>
+        {copy.home.heroSecondaryCta}
+      </Button>
+    </div>
+  </div>
+</section>

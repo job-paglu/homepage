@@ -1,0 +1,157 @@
+# Bootstrap: generate and commit the lockfiles that CI needs to exist.
+#
+# WHY THIS EXISTS
+#   This repository was authored on a machine with no Node.js and no Go
+#   toolchain, so `frontend/package-lock.json` and `backend/go.sum` were never
+#   generated. Without them:
+#     - the CI `frontend` job dies at `npm ci`, which requires a lockfile
+#     - `actions/setup-node`'s cache has no file to hash
+#     - `go mod download` cannot verify module checksums
+#     - `backend/Dockerfile` fails at `COPY go.mod go.sum`, deliberately
+#
+#   The normal fix is `npm install` + `go mod tidy` on a developer machine. This
+#   workflow does the same thing on a GitHub runner instead, so the repository
+#   can be bootstrapped without installing anything locally.
+#
+# RUN IT ONCE
+#   Actions tab -> "Bootstrap lockfiles" -> Run workflow. After it commits, start
+#   "CI" manually (also from the Actions tab): a push made with GITHUB_TOKEN does
+#   not trigger workflows, which is GitHub's guard against a workflow looping on
+#   its own commits.
+#
+#   After this has run successfully once, it should never be needed again.
+#   Routine dependency changes are made by a developer running `npm install` or
+#   `go mod tidy` locally and committing the result, exactly as normal. Leaving
+#   this workflow in place is harmless because it is manual-only.
+
+name: Bootstrap lockfiles
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: "Commit the generated lockfiles (uncheck for a dry run)"
+        type: boolean
+        default: true
+
+# This is the one workflow in the repository that writes to the repository, and
+# it needs exactly that. It is manual-only, so the write permission cannot be
+# reached by a pull request from a fork.
+permissions:
+  contents: write
+
+concurrency:
+  group: bootstrap-lockfiles
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "20"
+  GO_VERSION: "1.24"
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          # No `cache:` here on purpose. The cache key hashes the lockfile, which
+          # is the very thing that does not exist yet.
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      # `npm install` (not `npm ci`) is correct here and only here: this step's
+      # whole job is to RESOLVE the dependency tree and write the lockfile.
+      # Everywhere else `npm ci` is used, because it installs the tree the
+      # lockfile already pins instead of re-resolving it.
+      - name: Resolve frontend dependencies and write package-lock.json
+        working-directory: frontend
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          test -f package-lock.json || { echo "::error::package-lock.json was not created"; exit 1; }
+          echo "lockfileVersion: $(node -p "require('./package-lock.json').lockfileVersion")"
+
+      # Prove the lockfile is actually usable before committing it. A lockfile
+      # that `npm ci` rejects is worse than none, because it fails later and
+      # further from the cause.
+      - name: Verify npm ci accepts the new lockfile
+        working-directory: frontend
+        run: npm ci
+
+      - name: Tidy Go modules and write go.sum
+        working-directory: backend
+        run: |
+          go mod tidy
+          test -f go.sum || { echo "::error::go.sum was not created"; exit 1; }
+          echo "go.sum entries: $(wc -l < go.sum)"
+
+      - name: Verify the module graph downloads and verifies
+        working-directory: backend
+        run: go mod download && go mod verify
+
+      # Compile before committing. If the tree does not build, the lockfiles are
+      # still worth having, but the report must say so plainly rather than
+      # implying a green bootstrap means a working repository.
+      - name: Build check (informational, does not block the commit)
+        id: buildcheck
+        continue-on-error: true
+        run: |
+          echo "--- go build ---"
+          ( cd backend  && go build ./... ) || echo "GO_BUILD_FAILED=1" >> "$GITHUB_ENV"
+          echo "--- go vet ---"
+          ( cd backend  && go vet ./...   ) || echo "GO_VET_FAILED=1"   >> "$GITHUB_ENV"
+          echo "--- astro check ---"
+          ( cd frontend && npm run check   ) || echo "FE_CHECK_FAILED=1" >> "$GITHUB_ENV"
+          echo "--- astro build ---"
+          ( cd frontend && npm run build:nocheck ) || echo "FE_BUILD_FAILED=1" >> "$GITHUB_ENV"
+
+      - name: Commit the lockfiles
+        if: ${{ inputs.commit }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/package-lock.json backend/go.sum backend/go.mod
+          if git diff --cached --quiet; then
+            echo "Nothing to commit - the lockfiles were already present and unchanged."
+            exit 0
+          fi
+          git commit -m "build: generate package-lock.json and go.sum
+
+          Generated on a GitHub runner because the authoring machine had no
+          Node.js or Go toolchain. See .github/workflows/bootstrap-lockfiles.yml."
+          git push
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Bootstrap result"
+            echo
+            echo "| Step | Result |"
+            echo "|---|---|"
+            echo "| package-lock.json written | ${{ steps.buildcheck.outcome != 'skipped' && 'yes' || 'see log' }} |"
+            echo "| \`npm ci\` accepts it | yes (step would have failed otherwise) |"
+            echo "| go.sum written + verified | yes (step would have failed otherwise) |"
+            echo "| \`go build\` | ${GO_BUILD_FAILED:+FAILED}${GO_BUILD_FAILED:-passed} |"
+            echo "| \`go vet\` | ${GO_VET_FAILED:+FAILED}${GO_VET_FAILED:-passed} |"
+            echo "| \`astro check\` | ${FE_CHECK_FAILED:+FAILED}${FE_CHECK_FAILED:-passed} |"
+            echo "| \`astro build\` | ${FE_BUILD_FAILED:+FAILED}${FE_BUILD_FAILED:-passed} |"
+            echo
+            if [ -n "${GO_BUILD_FAILED}${GO_VET_FAILED}${FE_CHECK_FAILED}${FE_BUILD_FAILED}" ]; then
+              echo "**The lockfiles are committed, but the tree does not fully build yet.**"
+              echo "This is expected on the first run: none of this code had ever been"
+              echo "compiled. Read the failing step's log and fix forward - the"
+              echo "compiler is the first real verification this project has had."
+            else
+              echo "**Everything built.** Run the \`CI\` workflow next"
+              echo "(Actions -> CI -> Run workflow), then \`Deploy frontend\`."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

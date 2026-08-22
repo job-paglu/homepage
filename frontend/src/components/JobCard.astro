@@ -1,0 +1,63 @@
+---
+/**
+ * One job in the list.
+ *
+ * Scan order (request section 40) is title, company, location + job type,
+ * salary, qualification, excerpt, actions — and the DOM order below is the same
+ * order, so a screen reader and an eye traverse the card identically.
+ *
+ * The heading level is a prop rather than hard-coded: the home page nests these
+ * under an `<h2>` section heading, the jobs index puts them directly under the
+ * `<h1>`. Getting this wrong is the most common cause of a skipped heading
+ * level, which is a real WCAG failure and an invisible one.
+ */
+import ApplyButton from '@components/ApplyButton.astro';
+import Badge from '@components/Badge.astro';
+import Button from '@components/Button.astro';
+import JobMeta from '@components/JobMeta.astro';
+import styles from '@styles/jobCard.module.css';
+import { copy } from '@lib/copy';
+import { excerptFor, nonEmpty } from '@lib/format';
+import { jobPath } from '@lib/urls';
+import type { JobSummary } from '@lib/types';
+
+interface Props {
+  job: JobSummary;
+  headingLevel?: 2 | 3 | 4;
+}
+
+const { job, headingLevel = 3 } = Astro.props;
+
+const Heading = `h${headingLevel}` as 'h2' | 'h3' | 'h4';
+const href = jobPath(job.slug);
+const company = nonEmpty(job.company);
+const excerpt = excerptFor(job);
+---
+
+<article class:list={[styles.card, job.is_featured && styles.featured]}>
+  <div class={styles.head}>
+    <Heading class={styles.title}>
+      {/* The title's own text is the accessible name — descriptive by
+          construction, so no aria-label is needed here. */}
+      <a class={styles.titleLink} href={href}>{job.title}</a>
+    </Heading>
+    {job.is_featured && <Badge label={copy.job.featured} tone="featured" withDot />}
+  </div>
+
+  {company && <p class={styles.company}>{company}</p>}
+
+  <JobMeta job={job} variant="card" />
+
+  {excerpt && <p class={styles.excerpt}>{excerpt}</p>}
+
+  <div class={styles.actions}>
+    {/* "View Job" on its own would be one of a dozen identical links on the
+        page. The visually-hidden suffix names the job for a screen reader while
+        the visible label stays short. */}
+    <Button href={href} variant="quiet" full class={styles.action}>
+      {copy.job.view}
+      <span class="jp-visually-hidden">{` — ${job.title}`}</span>
+    </Button>
+    <ApplyButton job={job} variant="card" full class={styles.action} />
+  </div>
+</article>

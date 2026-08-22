@@ -1,0 +1,98 @@
+/* Deep emerald footer. White text measures 12.6:1 on it and --jp-brand-tint
+   measures 10.5:1, so both tiers of text clear AA comfortably. */
+
+.footer {
+  margin-top: var(--jp-section-y);
+  background-color: var(--jp-brand-active);
+  color: var(--jp-ink-inverse);
+}
+
+.inner {
+  display: grid;
+  gap: var(--jp-space-8);
+  padding-block: var(--jp-space-12) var(--jp-space-8);
+  /* Single column at 320px; the auto-fit grid takes over once there is room,
+     with no breakpoint to maintain. `minmax(min(100%, 15rem), 1fr)` is the
+     part that prevents overflow on a narrow phone. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+}
+
+.about {
+  min-width: 0;
+}
+
+.blurb {
+  margin-top: var(--jp-space-4);
+  max-width: var(--jp-measure-narrow);
+  color: var(--jp-brand-tint);
+  font-size: var(--jp-text-base);
+}
+
+.notice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--jp-space-2);
+  margin-top: var(--jp-space-5);
+  padding: var(--jp-space-2) var(--jp-space-3);
+  border-radius: var(--jp-radius-pill);
+  /* Amber as a background with ink on top — the token's only sanctioned use. */
+  background-color: var(--jp-accent);
+  color: var(--jp-ink);
+  font-size: var(--jp-text-xs);
+  font-weight: var(--jp-weight-semibold);
+  letter-spacing: var(--jp-tracking-snug);
+}
+
+.group {
+  min-width: 0;
+}
+
+.groupTitle {
+  margin-bottom: var(--jp-space-3);
+  color: var(--jp-ink-inverse);
+  font-size: var(--jp-text-xs);
+  font-weight: var(--jp-weight-bold);
+  letter-spacing: var(--jp-tracking-caps);
+  text-transform: uppercase;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  /* The footer is the no-JavaScript fallback for mobile navigation, so its
+     links carry the same 44px floor as the menu panel. */
+  min-height: var(--jp-touch-min);
+  color: var(--jp-brand-tint);
+  font-size: var(--jp-text-base);
+  text-decoration: none;
+}
+
+.link:hover,
+.link:focus-visible {
+  color: var(--jp-ink-inverse);
+  text-decoration: underline;
+}
+
+.bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--jp-space-3);
+  padding-block: var(--jp-space-5);
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--jp-brand-tint);
+  font-size: var(--jp-text-xs);
+}
+
+.tagline {
+  min-width: 0;
+}

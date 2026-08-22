@@ -1,0 +1,141 @@
+/* =============================================================================
+   Confirm dialog and toasts
+   -----------------------------------------------------------------------------
+   Both are overlays, so both take their stacking from the tokens' z-index scale
+   rather than inventing numbers. The dialog sits below toasts on purpose: a
+   toast reporting the outcome of the dialog's action must be readable while the
+   dialog is closing.
+   ========================================================================== */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--jp-z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--jp-space-4);
+  /* Derived from the ink token rather than a hand-written rgba(), so a palette
+     change carries through and no raw colour lives outside tokens.css. */
+  background: color-mix(in srgb, var(--jp-ink) 45%, transparent);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 28rem;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: var(--jp-space-5);
+  background: var(--jp-surface);
+  border: 1px solid var(--jp-border-strong);
+  border-radius: var(--jp-radius-lg);
+  box-shadow: var(--jp-shadow-lg);
+}
+
+.dialogTitle {
+  font-size: var(--jp-text-lg);
+  font-weight: var(--jp-weight-semibold);
+  line-height: var(--jp-leading-snug);
+}
+
+.dialogBody {
+  margin-top: var(--jp-space-3);
+  color: var(--jp-ink-soft);
+  font-size: var(--jp-text-sm);
+}
+
+.dialogBody p + p {
+  margin-top: var(--jp-space-2);
+}
+
+.dialogEmphasis {
+  font-weight: var(--jp-weight-semibold);
+  color: var(--jp-ink);
+}
+
+.dialogConfirmField {
+  margin-top: var(--jp-space-4);
+}
+
+.dialogActions {
+  display: flex;
+  flex-wrap: wrap-reverse;
+  justify-content: flex-end;
+  gap: var(--jp-space-3);
+  margin-top: var(--jp-space-5);
+}
+
+.dialogActions > * {
+  flex: 1 1 auto;
+}
+
+@media (min-width: 480px) {
+  .dialogActions > * {
+    flex: 0 0 auto;
+  }
+}
+
+/* --- Toasts -------------------------------------------------------------- */
+
+.toastRegion {
+  position: fixed;
+  right: var(--jp-space-4);
+  bottom: var(--jp-space-4);
+  left: var(--jp-space-4);
+  z-index: var(--jp-z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--jp-space-2);
+  /* The region itself must not swallow clicks meant for the page beneath it. */
+  pointer-events: none;
+}
+
+@media (min-width: 600px) {
+  .toastRegion {
+    left: auto;
+    max-width: 26rem;
+  }
+}
+
+/* The live regions themselves are unpositioned: two `position: fixed` regions
+   at the same offset would stack on top of each other. */
+.toastGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jp-space-2);
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--jp-space-3);
+  padding: var(--jp-space-3) var(--jp-space-4);
+  background: var(--jp-surface);
+  border: 1px solid var(--jp-border-strong);
+  border-left-width: 4px;
+  border-radius: var(--jp-radius-sm);
+  box-shadow: var(--jp-shadow-md);
+  font-size: var(--jp-text-sm);
+  pointer-events: auto;
+}
+
+.toastSuccess {
+  border-left-color: var(--jp-success);
+}
+
+.toastError {
+  border-left-color: var(--jp-danger);
+}
+
+.toastInfo {
+  border-left-color: var(--jp-brand);
+}
+
+.toastText {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.toastDismiss {
+  flex: 0 0 auto;
+}

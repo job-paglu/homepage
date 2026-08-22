@@ -1,0 +1,37 @@
+---
+/**
+ * Edit a job, addressed by UUID rather than slug (contract section 4) so the
+ * link keeps working after a slug change.
+ *
+ * The id is passed to the island as a prop and nothing else happens here. It is
+ * not validated as a UUID and not used to fetch: an unknown id produces a 404
+ * from the API, which the island renders as an error state. Guessing an id
+ * without a session still yields no data.
+ */
+import AdminLayout from '@layouts/AdminLayout.astro';
+import JobForm from '@components/admin/JobForm';
+
+export const prerender = false;
+
+Astro.response.headers.set('Cache-Control', 'no-store');
+
+const { id } = Astro.params;
+
+// `trailingSlash: 'never'` plus this route shape means `id` is always present,
+// but the type is optional, so the impossible case gets an honest redirect
+// rather than a non-null assertion.
+if (!id) {
+  return new Response(null, {
+    status: 302,
+    headers: { Location: '/admin/jobs', 'Cache-Control': 'no-store' },
+  });
+}
+---
+
+<AdminLayout
+  title="Edit job"
+  heading="Edit job"
+  lede="Changing the title does not change the public URL. That is deliberate — see the URL panel below the title."
+>
+  <JobForm jobId={id} client:load />
+</AdminLayout>

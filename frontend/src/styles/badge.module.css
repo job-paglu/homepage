@@ -1,0 +1,49 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--jp-space-1);
+  padding: 2px var(--jp-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--jp-radius-pill);
+  font-size: var(--jp-text-2xs);
+  font-weight: var(--jp-weight-bold);
+  letter-spacing: var(--jp-tracking-caps);
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex: none;
+}
+
+/* Amber is a BACKGROUND token only — 2.1:1 as text, which fails. The label sits
+   in --jp-ink on top of it at 9.1:1 (tokens.css contrast notes). Never invert
+   this pair. */
+.featured {
+  background-color: var(--jp-accent);
+  color: var(--jp-ink);
+}
+
+.brand {
+  background-color: var(--jp-brand-tint);
+  color: var(--jp-brand-active);
+}
+
+.neutral {
+  background-color: var(--jp-surface-sunken);
+  border-color: var(--jp-border-strong);
+  color: var(--jp-ink-soft);
+}
+
+/* The dot is decoration on top of the word, never instead of it: colour alone
+   must not be the only signal that a job is featured (WCAG 1.4.1). */
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--jp-radius-pill);
+  background-color: currentColor;
+  flex: none;
+}
+
+@media (forced-colors: active) {
+  .badge {
+    border-color: CanvasText;
+  }
+}

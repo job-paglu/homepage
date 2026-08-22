@@ -1,0 +1,27 @@
+/* Off-screen until focused, rather than `display: none` — a hidden element is
+   not reachable by the Tab key, which defeats the entire purpose. */
+.link {
+  position: absolute;
+  top: var(--jp-space-2);
+  left: var(--jp-space-2);
+  z-index: var(--jp-z-toast);
+  transform: translateY(calc(-100% - var(--jp-space-4)));
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--jp-control-h);
+  padding-inline: var(--jp-space-4);
+  border-radius: var(--jp-radius-md);
+  background-color: var(--jp-brand);
+  color: var(--jp-ink-inverse);
+  font-size: var(--jp-text-base);
+  font-weight: var(--jp-weight-semibold);
+  text-decoration: none;
+  box-shadow: var(--jp-shadow-md);
+  transition: transform var(--jp-duration-fast) var(--jp-ease);
+}
+
+.link:focus,
+.link:focus-visible {
+  transform: translateY(0);
+  color: var(--jp-ink-inverse);
+}

@@ -1,0 +1,51 @@
+# =============================================================================
+# Job Paglu — local runtime variables for `wrangler pages dev` / `astro dev`
+# -----------------------------------------------------------------------------
+# Copy to `.dev.vars` (git-ignored) before running locally:
+#     bash:        cp .dev.vars.example .dev.vars
+#     PowerShell:  Copy-Item .dev.vars.example .dev.vars
+#
+# This file is for values the WORKER reads at runtime (`locals.runtime.env`).
+# It is a different thing from `.env` / `.env.example`, which hold the values
+# Astro and Vite read at BUILD time (SITE_URL, PUBLIC_API_BASE_URL, …).
+#
+# Nothing here is a secret today. Cloudflare Access holds the admin credentials,
+# so this application stores no password hash, no session secret and no API key.
+# If that ever changes, the secret goes in the Pages dashboard — not in a file.
+# =============================================================================
+
+# development | production. Gates development-only affordances, including the
+# Access bypass below and the `http://` / `localhost` allowance for apply URLs.
+APP_ENV=development
+
+# ---------------------------------------------------------- Cloudflare Access
+#
+# Your Access team domain, without a scheme. The JWKS the API verifies tokens
+# against is fetched from https://<this>/cdn-cgi/access/certs
+ACCESS_TEAM_DOMAIN=REPLACE-TEAM.cloudflareaccess.com
+
+# The Access APPLICATION audience (AUD) tag, from the application's settings.
+# This is not decoration: `aud` is what prevents a token issued for another
+# application in the same Access team from being accepted here.
+ACCESS_AUD=REPLACE_WITH_ACCESS_APPLICATION_AUD_TAG
+
+# ---------------------------------------------------------------- DEV BYPASS
+#
+# LOCAL AND CI ONLY. When APP_ENV=development *and* this is non-empty, the admin
+# API accepts this identity with NO JWT at all, because there is no Access edge
+# in front of `wrangler pages dev`.
+#
+# Both conditions are required, and the code never reads this variable unless
+# APP_ENV === 'development' — see src/lib/server/access.ts. Every use logs a
+# warning. Leave it unset if you want to exercise real token verification.
+#
+# NEVER set this in a deployed environment. With APP_ENV=production it does
+# nothing; that is a second layer, not permission to try.
+ACCESS_DEV_BYPASS_EMAIL=dev-admin@example.invalid
+
+# --------------------------------------------------------------- apply_url policy
+#
+# Contract section 7: `http://` apply links are rejected unless this is "true".
+# Keep it false even locally unless you are specifically testing that branch —
+# a value accepted on write and rejected at publish time is a confusing bug.
+ALLOW_HTTP_APPLY_URLS=false

@@ -1,0 +1,130 @@
+---
+/**
+ * Hamburger navigation below 900px.
+ *
+ * No framework. A real `<button aria-expanded aria-controls>` plus ~35 lines of
+ * vanilla TypeScript in an inline module. The panel is toggled with the `hidden`
+ * attribute and a `data-open` attribute, never with an inline style, so nothing
+ * can leave a stale `style="display:none"` behind if the script throws
+ * mid-toggle.
+ *
+ * Keyboard: the trigger is focusable by construction, Enter/Space open it (it is
+ * a button, so that is free), Escape closes it and returns focus to the trigger,
+ * and opening moves focus to the first link. No focus trap here on purpose — the
+ * panel is not modal in the ARIA sense, and trapping a non-modal menu is more
+ * surprising than helpful.
+ */
+import Button from '@components/Button.astro';
+import styles from '@styles/mobileMenu.module.css';
+import { copy } from '@lib/copy';
+import { isCurrentPath, ROUTES } from '@lib/urls';
+
+interface Props {
+  links: ReadonlyArray<{ href: string; label: string }>;
+  currentPath: string;
+}
+
+const { links, currentPath } = Astro.props;
+const panelId = 'jp-mobile-menu';
+---
+
+<div class={styles.wrap}>
+  <button
+    type="button"
+    class={styles.trigger}
+    aria-expanded="false"
+    aria-controls={panelId}
+    aria-label={copy.nav.openMenu}
+    data-close-label={copy.nav.closeMenu}
+    data-jp-menu-trigger
+  >
+    <span class={styles.bars} aria-hidden="true">
+      <span class={styles.bar}></span>
+      <span class={styles.bar}></span>
+      <span class={styles.bar}></span>
+    </span>
+  </button>
+
+  <div class={styles.scrim} data-jp-menu-scrim hidden></div>
+
+  <nav id={panelId} class={styles.panel} aria-label={copy.nav.menuLabel} data-jp-menu-panel hidden>
+    <ul class={styles.panelList}>
+      {
+        links.map((link) => (
+          <li>
+            <a
+              class={styles.panelLink}
+              href={link.href}
+              aria-current={isCurrentPath(currentPath, link.href) ? 'page' : undefined}
+            >
+              {link.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+    <Button href={ROUTES.jobs} variant="primary" full class={styles.panelCta}>
+      {copy.home.heroPrimaryCta}
+    </Button>
+  </nav>
+</div>
+
+<script>
+  const DESKTOP = '(min-width: 900px)';
+
+  const trigger = document.querySelector<HTMLButtonElement>('[data-jp-menu-trigger]');
+  const panel = document.querySelector<HTMLElement>('[data-jp-menu-panel]');
+  const scrim = document.querySelector<HTMLElement>('[data-jp-menu-scrim]');
+
+  if (trigger && panel) {
+    // Labels come from the same copy module as the markup, read back off the
+    // rendered DOM so the script holds no English of its own.
+    const openLabel = trigger.getAttribute('aria-label') ?? '';
+    const closeLabel = trigger.dataset.closeLabel ?? openLabel;
+
+    const isOpen = () => trigger.getAttribute('aria-expanded') === 'true';
+
+    const setOpen = (open: boolean): void => {
+      trigger.setAttribute('aria-expanded', String(open));
+      trigger.setAttribute('aria-label', open ? closeLabel : openLabel);
+      panel.hidden = !open;
+      panel.dataset.open = String(open);
+      if (scrim) scrim.hidden = !open;
+      // Scroll lock via an attribute on <html>, matched by a rule in global.css.
+      // An attribute is recoverable; a stale inline style is not. The popup owns
+      // a different attribute, so neither can unlock the other's overlay.
+      document.documentElement.toggleAttribute('data-jp-menu-open', open);
+    };
+
+    const close = (returnFocus: boolean): void => {
+      if (!isOpen()) return;
+      setOpen(false);
+      if (returnFocus) trigger.focus();
+    };
+
+    trigger.addEventListener('click', () => {
+      const next = !isOpen();
+      setOpen(next);
+      if (next) panel.querySelector<HTMLElement>('a, button')?.focus();
+    });
+
+    scrim?.addEventListener('click', () => close(true));
+
+    // Closing on link activation matters even though the click navigates: a
+    // same-page anchor would otherwise leave the panel open over the target.
+    panel.addEventListener('click', (event) => {
+      if ((event.target as HTMLElement | null)?.closest('a')) close(false);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') close(true);
+    });
+
+    // Crossing into desktop layout hides the whole component in CSS. Without
+    // this the scroll lock would survive the resize with nothing on screen to
+    // undo it.
+    window.matchMedia(DESKTOP).addEventListener('change', (event) => {
+      if (event.matches) close(false);
+    });
+  }
+</script>

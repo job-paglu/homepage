@@ -1,0 +1,74 @@
+---
+/**
+ * The API failed. Never a blank region, never a stack trace.
+ *
+ * `message` comes from `ApiError.message`, which the contract guarantees is safe
+ * to show a visitor: no SQL, no file path, no internal hostname (contract
+ * section 1.2). `error.stack` is never passed in and must never be — that is
+ * server-side detail and it belongs in the server log.
+ *
+ * "Try again" appears only when `ApiError.isRetryable` is true. Offering a retry
+ * for a 404 or a 422 trains people to click a button that cannot help.
+ * The retry is a plain link to the same URL: on an SSR page that re-runs the
+ * fetch, so it needs no JavaScript.
+ */
+import Button from '@components/Button.astro';
+import styles from '@styles/states.module.css';
+import { copy } from '@lib/copy';
+import { ROUTES } from '@lib/urls';
+
+interface Props {
+  message: string;
+  title?: string;
+  /** Pass `ApiError.isRetryable`. */
+  retryable?: boolean;
+  /** Where "Try again" points. Normally the current URL. */
+  retryHref?: string;
+  /** `ApiError.requestId` — the one identifier support can correlate with a log. */
+  requestId?: string | undefined;
+}
+
+const {
+  message,
+  title = copy.states.errorTitle,
+  retryable = false,
+  retryHref = ROUTES.jobs,
+  requestId,
+} = Astro.props;
+
+const safeMessage = message.trim().length > 0 ? message : copy.states.errorFallbackMessage;
+---
+
+{/* `role="status"` + polite, not `role="alert"`: the panel is present on first
+    paint of a server-rendered page, so there is nothing for an assertive live
+    region to interrupt — it would only shout at a screen reader that is already
+    about to read it. The politeness matters on a client navigation. */}
+<div class:list={[styles.panel, styles.error]} role="status" aria-live="polite">
+  <svg
+    class:list={[styles.icon, styles.errorIcon]}
+    viewBox="0 0 32 32"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.7"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <circle cx="16" cy="16" r="12"></circle>
+    <path d="M16 10v9M16 22.5v.5"></path>
+  </svg>
+  <p class={styles.title}>{title}</p>
+  <p class:list={[styles.body, styles.errorBody]}>{safeMessage}</p>
+
+  <div class={styles.actions}>
+    {retryable && <Button href={retryHref} variant="primary">{copy.states.errorRetry}</Button>}
+    <Button href={ROUTES.home} variant="quiet">{copy.states.emptyAction}</Button>
+  </div>
+
+  {
+    requestId && (
+      <p class={styles.requestId}>{`${copy.states.errorRequestIdPrefix}: ${requestId}`}</p>
+    )
+  }
+</div>

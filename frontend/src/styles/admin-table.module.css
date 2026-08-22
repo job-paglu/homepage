@@ -1,0 +1,199 @@
+/* =============================================================================
+   Jobs table
+   -----------------------------------------------------------------------------
+   One markup, two layouts. Above 700px this is a real table. Below it, the
+   table elements are re-flowed to `display: block` and each row becomes a card.
+
+   Two consequences of that flip are handled deliberately:
+
+   1. Changing `display` on a table element drops its implicit ARIA role in
+      Chromium and WebKit. `JobsTableRow.tsx` therefore sets the roles
+      explicitly (`role="table"`, `"row"`, `"cell"`, …) so the semantics survive
+      the reflow. Those roles are no-ops in the wide layout.
+   2. `thead` is hidden in the card layout, so each cell carries its own visible
+      label as a real DOM element rather than CSS `content: attr(...)` — a
+      generated string is not reliably announced by screen readers.
+
+   A table that scrolls sideways on a phone is not shipped. There is no
+   `overflow-x` here on purpose.
+   ========================================================================== */
+
+.wrap {
+  background: var(--jp-surface);
+  border: 1px solid var(--jp-border);
+  border-radius: var(--jp-radius-md);
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.caption {
+  padding: var(--jp-space-3) var(--jp-space-4);
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-xs);
+  text-align: left;
+  border-bottom: 1px solid var(--jp-border);
+}
+
+.th {
+  padding: var(--jp-space-2) var(--jp-space-4);
+  background: var(--jp-surface-sunken);
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-2xs);
+  font-weight: var(--jp-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--jp-tracking-caps);
+  border-bottom: 1px solid var(--jp-border);
+  white-space: nowrap;
+}
+
+.cell {
+  padding: var(--jp-space-3) var(--jp-space-4);
+  font-size: var(--jp-text-sm);
+  border-bottom: 1px solid var(--jp-border);
+  vertical-align: top;
+}
+
+.row[data-busy='true'] {
+  opacity: 0.6;
+}
+
+.cellLabel {
+  display: none;
+}
+
+.title {
+  display: block;
+  color: var(--jp-ink);
+  font-weight: var(--jp-weight-medium);
+  font-size: var(--jp-text-md);
+  text-decoration: none;
+}
+
+.titleLink {
+  color: var(--jp-brand);
+}
+
+.slug {
+  display: block;
+  margin-top: var(--jp-space-1);
+  color: var(--jp-ink-faint);
+  font-family: var(--jp-font-mono);
+  font-size: var(--jp-text-2xs);
+  word-break: break-all;
+}
+
+.muted {
+  color: var(--jp-ink-muted);
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--jp-space-2);
+}
+
+/* --- Pagination ---------------------------------------------------------- */
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--jp-space-3);
+  margin-top: var(--jp-space-4);
+}
+
+.pagerCount {
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-xs);
+}
+
+.pagerControls {
+  display: flex;
+  gap: var(--jp-space-2);
+}
+
+/* --- Card layout --------------------------------------------------------- */
+
+@media (max-width: 699px) {
+  .wrap {
+    background: none;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .table,
+  .body,
+  .row,
+  .cell {
+    display: block;
+    width: 100%;
+  }
+
+  .head {
+    display: none;
+  }
+
+  .caption {
+    padding: 0 0 var(--jp-space-2);
+    border-bottom: 0;
+  }
+
+  .row {
+    padding: var(--jp-space-4);
+    margin-bottom: var(--jp-space-3);
+    background: var(--jp-surface);
+    border: 1px solid var(--jp-border);
+    border-radius: var(--jp-radius-md);
+  }
+
+  .cell {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--jp-space-3);
+    padding: var(--jp-space-1) 0;
+    border-bottom: 0;
+  }
+
+  .cellLabel {
+    display: block;
+    flex: 0 0 6.5rem;
+    color: var(--jp-ink-muted);
+    font-size: var(--jp-text-2xs);
+    font-weight: var(--jp-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: var(--jp-tracking-caps);
+  }
+
+  /* The title owns the whole card width; a label beside it would waste space. */
+  .cellTitle {
+    display: block;
+    padding-bottom: var(--jp-space-2);
+  }
+
+  .cellTitle .cellLabel {
+    display: none;
+  }
+
+  .cellActions {
+    display: block;
+    padding-top: var(--jp-space-3);
+    margin-top: var(--jp-space-2);
+    border-top: 1px solid var(--jp-border);
+  }
+
+  .cellActions .cellLabel {
+    display: none;
+  }
+
+  .actions > * {
+    flex: 1 1 auto;
+  }
+}

@@ -1,0 +1,75 @@
+# =============================================================================
+# Job Paglu — Cloudflare Pages project configuration
+# -----------------------------------------------------------------------------
+# ONE project serves the whole product: the Astro site and the API routes under
+# `src/pages/api/**` are the same deployment, so `/api/*` is always same-origin
+# and there is no proxy, no second service, and no CORS to configure.
+#
+# Every id below is a PLACEHOLDER. Real ids are account-identifying values and
+# do not belong in a tracked file — fill them in locally, or set them in the
+# Pages dashboard, and never commit the result.
+# =============================================================================
+
+name = "job-paglu"
+
+# Astro writes the built site (static assets + the SSR worker) here.
+pages_build_output_dir = "dist"
+
+# Pinned, not floating. The compatibility date decides workerd's behaviour, so
+# leaving it to "whatever is newest at deploy time" means a redeploy can change
+# runtime semantics without a code change.
+compatibility_date = "2026-08-01"
+
+# Required by the Astro Cloudflare adapter's own runtime shims, not by anything
+# in `src/lib/server/**` — that code uses only Web Crypto, fetch, URL and
+# TextEncoder/TextDecoder, all of which workerd provides natively. If a build
+# ever succeeds without this flag, removing it is safe; it is here because the
+# adapter is the part that needs it.
+compatibility_flags = ["nodejs_compat"]
+
+# ------------------------------------------------------------------ D1 binding
+#
+# `binding = "DB"` is the name the code reads (see src/lib/server/env.ts). It is
+# deliberately generic: the application has exactly one database, and naming the
+# binding after the product would mean renaming code to rename a database.
+[[d1_databases]]
+binding = "DB"
+database_name = "job-paglu"
+database_id = "00000000-0000-0000-0000-000000000000" # PLACEHOLDER — replace locally
+migrations_dir = "migrations"
+
+# Preview deployments get their own database. Sharing one with production is the
+# classic way a preview branch's migration or seed lands on live data.
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "job-paglu-preview"
+database_id = "00000000-0000-0000-0000-000000000000" # PLACEHOLDER — replace locally
+migrations_dir = "migrations"
+
+# ------------------------------------------------------------------- variables
+#
+# Non-secret runtime configuration. Secrets (there are none today — Cloudflare
+# Access holds the credentials, not this app) would go in the dashboard or via
+# `wrangler pages secret put`, never here.
+#
+# ACCESS_TEAM_DOMAIN / ACCESS_AUD are not secrets: the JWKS endpoint is public
+# and the AUD tag is a public application identifier. They still must be correct,
+# because `aud` is what stops a token minted for a DIFFERENT application in the
+# same Access team from authenticating here.
+[vars]
+APP_ENV = "production"
+ACCESS_TEAM_DOMAIN = "REPLACE-TEAM.cloudflareaccess.com"
+ACCESS_AUD = "REPLACE_WITH_ACCESS_APPLICATION_AUD_TAG"
+ALLOW_HTTP_APPLY_URLS = "false"
+
+# Note the absence of ACCESS_DEV_BYPASS_EMAIL. The bypass is gated on
+# APP_ENV === "development" *and* that variable being set; production sets
+# APP_ENV = "production", so the variable is never even consulted here. Setting
+# it in this block would be a no-op, and it is left out so nobody reads its
+# presence as "the bypass is available in production".
+
+[env.preview.vars]
+APP_ENV = "production"
+ACCESS_TEAM_DOMAIN = "REPLACE-TEAM.cloudflareaccess.com"
+ACCESS_AUD = "REPLACE_WITH_PREVIEW_ACCESS_APPLICATION_AUD_TAG"
+ALLOW_HTTP_APPLY_URLS = "false"

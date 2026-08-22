@@ -1,0 +1,98 @@
+---
+/**
+ * The job's facts, in two presentations.
+ *
+ * `card` is the compact strip used inside JobCard, in the scan order the request
+ * fixes: location + job type, then salary, then qualification.
+ * `detail` is a labelled `<dl>` for the detail page, which has room to name
+ * every field.
+ *
+ * One component for both so a field added to the API cannot appear in one view
+ * and be quietly forgotten in the other.
+ */
+import styles from '@styles/jobMeta.module.css';
+import { copy } from '@lib/copy';
+import { humaniseDate, isoDate, jobTypeLabel, nonEmpty, remoteTypeLabel } from '@lib/format';
+import type { Job, JobSummary } from '@lib/types';
+
+interface Props {
+  job: JobSummary | Job;
+  variant?: 'card' | 'detail';
+}
+
+const { job, variant = 'card' } = Astro.props;
+
+const location = nonEmpty(job.location);
+const type = jobTypeLabel(job.job_type);
+const remote = remoteTypeLabel(job.remote_type);
+const salary = nonEmpty(job.salary);
+const qualification = nonEmpty(job.qualification);
+const company = nonEmpty(job.company);
+const country = nonEmpty(job.country);
+const experience = nonEmpty(job.experience_level);
+const category = nonEmpty(job.category);
+
+const postedIso = isoDate(job.published_at);
+const posted = humaniseDate(job.published_at);
+const closingIso = isoDate(job.expires_at);
+const closing = humaniseDate(job.expires_at);
+
+/**
+ * Detail rows, built as data so the markup below stays a single loop and an
+ * absent field simply never enters the list. `Not specified` is never rendered
+ * for an optional column — an empty row is noise, not information.
+ */
+const rows: Array<{ term: string; value: string; strong?: boolean; datetime?: string }> = [];
+if (location) rows.push({ term: copy.job.labelLocation, value: location, strong: true });
+if (type) rows.push({ term: copy.job.labelJobType, value: type });
+if (salary) rows.push({ term: copy.job.labelSalary, value: salary, strong: true });
+if (qualification) rows.push({ term: copy.job.labelQualification, value: qualification });
+if (company) rows.push({ term: copy.job.labelCompany, value: company });
+if (country) rows.push({ term: copy.job.labelCountry, value: country });
+if (remote) rows.push({ term: copy.job.labelWorkStyle, value: remote });
+if (experience) rows.push({ term: copy.job.labelExperience, value: experience });
+if (category) rows.push({ term: copy.job.labelCategory, value: category });
+if (posted && postedIso) rows.push({ term: copy.job.labelPosted, value: posted, datetime: postedIso });
+if (closing && closingIso) rows.push({ term: copy.job.labelClosing, value: closing, datetime: closingIso });
+---
+
+{
+  variant === 'detail' ? (
+    <dl class={styles.grid}>
+      {rows.map((row) => (
+        <div class={styles.row}>
+          <dt class={styles.term}>{row.term}</dt>
+          <dd class:list={[styles.value, row.strong && styles.valueStrong]}>
+            {row.datetime ? <time datetime={row.datetime}>{row.value}</time> : row.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  ) : (
+    <>
+      {/* location + job type, joined visually by a generated middot so the
+          separator is never announced as content. */}
+      {(location || type || remote) && (
+        <ul class={styles.strip}>
+          {location && <li class={styles.stripItem}>{location}</li>}
+          {type && <li class={styles.stripItem}>{type}</li>}
+          {remote && <li class={styles.stripItem}>{remote}</li>}
+        </ul>
+      )}
+
+      {salary && (
+        <p class={styles.salary}>
+          <span class={styles.inlineLabel}>{copy.job.labelSalary}</span>
+          <span>{salary}</span>
+        </p>
+      )}
+
+      {qualification && (
+        <p class={styles.qualification}>
+          <span class={styles.inlineLabel}>{copy.job.labelQualification}</span>
+          <span>{qualification}</span>
+        </p>
+      )}
+    </>
+  )
+}

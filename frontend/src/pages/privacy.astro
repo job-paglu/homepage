@@ -1,0 +1,40 @@
+---
+/**
+ * Privacy placeholder. Prerendered — nothing here changes per request.
+ *
+ * **This page deliberately makes no legal claim that is not true.** It does not
+ * assert GDPR or CCPA compliance, does not name a company entity, does not
+ * invent a registered address or company number, and does not describe a data
+ * subject request process that does not exist yet. Every sentence in
+ * `copy.privacy` is a statement about what this site actually does today; if the
+ * site's behaviour changes, that copy must change with it.
+ */
+export const prerender = true;
+
+import BaseLayout from '@layouts/BaseLayout.astro';
+import styles from '@styles/page.module.css';
+import { copy } from '@lib/copy';
+import { pageTitle } from '@lib/seo';
+import { absoluteUrl, ROUTES } from '@lib/urls';
+---
+
+<BaseLayout
+  title={pageTitle(copy.privacy.metaTitle)}
+  description={copy.privacy.metaDescription}
+  canonical={absoluteUrl(ROUTES.privacy, Astro.site)}
+>
+  <section class={styles.section}>
+    <div class="jp-container jp-container--prose">
+      <div class={styles.head}>
+        <h1 class={styles.title}>{copy.privacy.heading}</h1>
+      </div>
+
+      <div class="jp-prose">
+        {copy.privacy.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
+
+        <h2>{copy.privacy.contactHeading}</h2>
+        <p>{copy.privacy.contactBody}</p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

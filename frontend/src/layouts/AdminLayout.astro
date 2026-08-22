@@ -1,0 +1,71 @@
+---
+/**
+ * Shell for every /admin page.
+ *
+ * Standalone by design: it imports `tokens.css` and `admin.css` and nothing
+ * else. It must not reach for `global.css` or `BaseLayout.astro` — the public
+ * site owns those, its typographic rhythm is wrong for a dense tool, and a
+ * shared layout would make every marketing change a dashboard regression risk.
+ *
+ * Nothing sensitive is rendered here. The page shell contains no job data, no
+ * admin identity and no token; every byte of real content arrives from an
+ * Access-gated API call made by the island inside. The security boundary is
+ * `requireAdmin` in `src/lib/server/access.ts` — see `src/lib/adminIdentity.ts`
+ * for why the client side renders a notice instead of redirecting.
+ *
+ * In production Cloudflare Access sits in front of `/admin/*` as well, so this
+ * shell is not reachable anonymously at all. The chrome is therefore
+ * unconditional: there is no signed-out variant of an admin page, because there
+ * is no sign-in page of ours to render one for.
+ */
+import '../styles/tokens.css';
+import '../styles/admin.css';
+import AdminHeader from '@components/admin/AdminHeader.astro';
+import AdminNav from '@components/admin/AdminNav.astro';
+
+interface Props {
+  /** Browser tab title. The product name is appended here, not by callers. */
+  title: string;
+  /** The h1. Omit on pages that render their own heading. */
+  heading?: string | undefined;
+  lede?: string | undefined;
+}
+
+const { title, heading, lede } = Astro.props;
+const currentPath = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- The dashboard must never be indexed, and must never leak an admin URL
+         to an external site as a referrer. -->
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="referrer" content="same-origin" />
+    <meta name="color-scheme" content="light" />
+    <title>{title} · Job Paglu admin</title>
+  </head>
+  <body class="jpa-body">
+    <a class="jpa-skip" href="#jpa-main">Skip to main content</a>
+    <AdminHeader />
+
+    <div class="jpa-shell">
+      <AdminNav currentPath={currentPath} />
+      <main class="jpa-main" id="jpa-main">
+        {
+          heading && (
+            <div class="jpa-page-head">
+              <div>
+                <h1 class="jpa-page-title">{heading}</h1>
+                {lede && <p class="jpa-page-lede">{lede}</p>}
+              </div>
+            </div>
+          )
+        }
+        <slot />
+      </main>
+    </div>
+  </body>
+</html>

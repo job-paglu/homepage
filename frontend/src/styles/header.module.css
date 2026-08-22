@@ -1,0 +1,110 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--jp-z-header);
+  /* Opaque first, translucent second: a browser without color-mix() keeps a
+     solid bar instead of a transparent one with text scrolling behind it. */
+  background-color: var(--jp-paper);
+  background-color: color-mix(in srgb, var(--jp-paper) 88%, transparent);
+  /* Cheap, and it is what makes the sticky bar read as glass rather than as a
+     slab that has detached from the page. Degrades to the flat colour above. */
+  backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--jp-border);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--jp-space-4);
+  min-height: var(--jp-header-h);
+  min-width: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  /* The logo is the tallest thing in the bar; give it the touch-target floor
+     so tapping near it on a phone still lands on the home link. */
+  min-height: var(--jp-touch-min);
+  min-width: 0;
+}
+
+/* --- Desktop navigation --------------------------------------------------- */
+
+/* Hidden below 900px, where MobileMenu takes over (project CLAUDE.md,
+   *Responsive Strategy*). Two separate navs rather than one restyled nav: the
+   panel needs its own markup for the focus and Escape behaviour, and
+   duplicating four links is cheaper than a component that tries to be both. */
+.desktopNav {
+  display: none;
+}
+
+.list {
+  display: flex;
+  align-items: center;
+  gap: var(--jp-space-1);
+  margin: 0;
+  list-style: none;
+  padding: 0;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--jp-control-h);
+  padding-inline: var(--jp-space-3);
+  border-radius: var(--jp-radius-md);
+  color: var(--jp-ink-soft);
+  font-size: var(--jp-text-base);
+  font-weight: var(--jp-weight-medium);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color var(--jp-duration-fast) var(--jp-ease);
+}
+
+.link:hover {
+  background-color: var(--jp-surface-sunken);
+  color: var(--jp-ink);
+}
+
+/* aria-current is the accessible signal; the underline and ink weight are the
+   visual one. Both, so neither audience depends on the other. */
+.link[aria-current='page'] {
+  color: var(--jp-ink);
+  font-weight: var(--jp-weight-semibold);
+  box-shadow: inset 0 -2px 0 var(--jp-brand);
+  border-radius: var(--jp-radius-xs);
+}
+
+.cta {
+  margin-left: var(--jp-space-2);
+}
+
+@media (min-width: 900px) {
+  .desktopNav {
+    display: block;
+  }
+}
+
+/* --- No-JavaScript fallback ----------------------------------------------- */
+
+/* The hamburger needs a script to open. Without one, a phone visitor would have
+   no header navigation at all, so <noscript> renders the same links inline.
+   Wraps rather than scrolls, and every item still meets the touch floor. */
+.noscriptNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--jp-space-2);
+  padding: var(--jp-space-2) 0 var(--jp-space-3);
+  border-top: 1px solid var(--jp-border);
+  list-style: none;
+  margin: 0;
+}
+
+/* Above 900px the real nav is visible, so this would be a second copy. */
+@media (min-width: 900px) {
+  .noscriptNav {
+    display: none;
+  }
+}

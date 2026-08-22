@@ -1,0 +1,51 @@
+---
+/**
+ * Success, zero rows. `GET /api/jobs` returns 200 with `data: []` for an empty
+ * result, never 404 (contract section 3) — so this is a normal outcome, not an
+ * error, and it must not look like one.
+ *
+ * `aria-live="polite"` so a client-side navigation that lands on an empty list
+ * announces the change instead of leaving a screen-reader user on a page that
+ * silently emptied.
+ */
+import Button from '@components/Button.astro';
+import styles from '@styles/states.module.css';
+import { copy } from '@lib/copy';
+import { ROUTES } from '@lib/urls';
+
+interface Props {
+  title?: string;
+  body?: string;
+  actionHref?: string;
+  actionLabel?: string;
+}
+
+const {
+  title = copy.states.emptyTitle,
+  body = copy.states.emptyBody,
+  actionHref = ROUTES.home,
+  actionLabel = copy.states.emptyAction,
+} = Astro.props;
+---
+
+<div class={styles.panel} role="status" aria-live="polite">
+  <svg
+    class={styles.icon}
+    viewBox="0 0 32 32"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <rect x="4.5" y="9.5" width="23" height="17" rx="2.5"></rect>
+    <path d="M11.5 9.5V7a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v2.5M4.5 16h23"></path>
+  </svg>
+  <p class={styles.title}>{title}</p>
+  <p class={styles.body}>{body}</p>
+  <div class={styles.actions}>
+    <Button href={actionHref} variant="quiet">{actionLabel}</Button>
+  </div>
+</div>

@@ -1,0 +1,33 @@
+.list {
+  display: grid;
+  gap: var(--jp-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  /* Grid items default to min-width:auto, which is min-content — a long job
+     title would then widen the track and scroll the page. This is the single
+     most important line in the file. */
+  min-width: 0;
+  display: flex;
+}
+
+/* Two columns from 900px (project CLAUDE.md, *Responsive Strategy*). auto-fit
+   rather than a fixed count so 1024–1279 and 1280+ need no extra rule, and the
+   minimum is expressed with min() so it can never exceed the track. */
+@media (min-width: 900px) {
+  .list {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    gap: var(--jp-space-5);
+  }
+}
+
+/* Above the page max-width the container has already stopped growing, so the
+   only thing left to do is let the cards breathe a little more. */
+@media (min-width: 1280px) {
+  .list {
+    gap: var(--jp-space-6);
+  }
+}

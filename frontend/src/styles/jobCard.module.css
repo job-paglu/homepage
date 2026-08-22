@@ -1,0 +1,130 @@
+/* Card hierarchy (request section 40): title, then location + job type, then
+   salary, then qualification, then the excerpt, then the actions. The visual
+   weight below descends in exactly that order, so the eye and the DOM agree. */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jp-space-3);
+  /* min-width: 0 is what stops a 60-character job title from stretching its
+     grid track and pushing the whole list wider than the viewport. */
+  min-width: 0;
+  height: 100%;
+  padding: var(--jp-space-5);
+  border: 1px solid var(--jp-border);
+  border-radius: var(--jp-radius-lg);
+  background-color: var(--jp-surface);
+  box-shadow: var(--jp-shadow-xs);
+  transition:
+    border-color var(--jp-duration-fast) var(--jp-ease),
+    box-shadow var(--jp-duration-base) var(--jp-ease),
+    transform var(--jp-duration-base) var(--jp-ease);
+}
+
+.card:hover {
+  border-color: var(--jp-border-strong);
+  box-shadow: var(--jp-shadow-md);
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .card:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* A featured card gets a left rule as well as the amber badge, so the state is
+   never signalled by colour alone (WCAG 1.4.1) and survives greyscale. */
+.featured {
+  border-color: var(--jp-accent);
+  box-shadow:
+    inset 3px 0 0 var(--jp-accent),
+    var(--jp-shadow-sm);
+}
+
+/* --- Title block ---------------------------------------------------------- */
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--jp-space-3);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--jp-text-lg);
+  font-weight: var(--jp-weight-semibold);
+  line-height: var(--jp-leading-snug);
+  letter-spacing: var(--jp-tracking-snug);
+}
+
+.titleLink {
+  color: var(--jp-ink);
+  text-decoration: none;
+}
+
+.titleLink:hover {
+  color: var(--jp-brand);
+  text-decoration: underline;
+}
+
+/* The company is identity, not metadata, so it sits with the title rather than
+   in the meta row below it. */
+.company {
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-sm);
+  font-weight: var(--jp-weight-medium);
+  min-width: 0;
+}
+
+/* --- Excerpt -------------------------------------------------------------- */
+
+.excerpt {
+  margin: 0;
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-base);
+  line-height: var(--jp-leading-normal);
+  /* Server-computed excerpts are capped at 200 chars, but an admin-typed
+     description can still produce an awkwardly tall card in a two-column grid.
+     Clamping keeps the row heights even without truncating the data itself. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+/* --- Actions -------------------------------------------------------------- */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--jp-space-2);
+  /* Pins the actions to the bottom of a stretched card so a two-column grid
+     lines its buttons up regardless of title length. */
+  margin-top: auto;
+  padding-top: var(--jp-space-2);
+}
+
+/* Stacked and full-width at 320px, side by side as soon as they fit. */
+.action {
+  flex: 1 1 100%;
+}
+
+@media (min-width: 420px) {
+  .action {
+    flex: 1 1 auto;
+    min-width: 8.5rem;
+  }
+}
+
+@media (min-width: 600px) {
+  .card {
+    padding: var(--jp-space-6);
+  }
+
+  .title {
+    font-size: var(--jp-text-xl);
+  }
+}

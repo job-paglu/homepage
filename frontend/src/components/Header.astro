@@ -1,0 +1,88 @@
+---
+/**
+ * Sticky site header.
+ *
+ * Two navigations rather than one restyled nav: the desktop `<ul>` and the
+ * mobile panel need different markup (the panel owns the Escape/focus
+ * behaviour), and duplicating four links is far cheaper than a component trying
+ * to be both. Only one is in the layout at any width, so there is no duplicate
+ * landmark for a screen reader to wade through.
+ *
+ * A `<noscript>` copy of the same links exists because the hamburger needs a
+ * script to open: without it, a phone visitor with JavaScript blocked would
+ * have no header navigation at all.
+ */
+import Button from '@components/Button.astro';
+import Logo from '@components/Logo.astro';
+import MobileMenu from '@components/MobileMenu.astro';
+import styles from '@styles/header.module.css';
+import { copy } from '@lib/copy';
+import { isCurrentPath, ROUTES } from '@lib/urls';
+
+interface Props {
+  /** `Astro.url.pathname`, for aria-current. */
+  currentPath: string;
+}
+
+const { currentPath } = Astro.props;
+
+const links = [
+  { href: ROUTES.home, label: copy.nav.home },
+  { href: ROUTES.jobs, label: copy.nav.jobs },
+] as const;
+---
+
+<header class={styles.header}>
+  <div class:list={['jp-container', styles.inner]}>
+    <div class={styles.brand}>
+      <Logo />
+    </div>
+
+    <nav class={styles.desktopNav} aria-label={copy.nav.primaryLabel}>
+      <ul class={styles.list}>
+        {
+          links.map((link) => (
+            <li>
+              <a
+                class={styles.link}
+                href={link.href}
+                aria-current={isCurrentPath(currentPath, link.href) ? 'page' : undefined}
+              >
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+        <li>
+          <Button href={ROUTES.jobs} variant="primary" size="sm" class={styles.cta}>
+            {copy.home.heroPrimaryCta}
+          </Button>
+        </li>
+      </ul>
+    </nav>
+
+    <MobileMenu links={links} currentPath={currentPath} />
+  </div>
+
+  <noscript>
+    <div class="jp-container">
+      <ul class={styles.noscriptNav}>
+        {
+          links.map((link) => (
+            <li>
+              <a class={styles.link} href={link.href}>
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+        <li>
+          <a class={styles.link} href={ROUTES.privacy}>{copy.nav.privacy}</a>
+        </li>
+        <li>
+          <a class={styles.link} href={ROUTES.terms}>{copy.nav.terms}</a>
+        </li>
+      </ul>
+    </div>
+  </noscript>
+</header>

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Job Paglu favicon.
+
+       This is the SAME mark as the wordmark glyph in src/components/Logo.astro:
+       a globe reduced to a circle and a single meridian. Two agents originally
+       drew two different marks here (a knocked-out "J" in this file, a globe in
+       Logo.astro), which would have put one symbol in the browser tab and a
+       different one on every page. Unified on the globe, because that is the
+       mark a visitor actually sees.
+
+       Kept from the "J" version, because the reasoning was right: a solid
+       emerald tile with the glyph knocked out, rather than a bare coloured
+       glyph. The tile holds its shape against a light or a dark browser tab,
+       and at 16px it reads as a block of brand colour instead of thin strokes
+       on transparency that vanish.
+
+       stroke-width 3 of a 32 unit box is 9.4%, which renders ~1.5px at 16px
+       against maximum contrast (near-white on emerald). Do not thin it.
+
+       Colours are literals because SVG cannot read a CSS custom property:
+       #1F5F4B is --jp-c-emerald-700 and #FDFCFA is --jp-c-paper-050, both in
+       src/styles/tokens.css. Change them together. -->
+  <rect width="32" height="32" rx="7" fill="#1F5F4B"/>
+  <g fill="none" stroke="#FDFCFA" stroke-width="3" stroke-linecap="round">
+    <circle cx="16" cy="16" r="8"/>
+    <path d="M16 8c3 2.6 3 12.8 0 16M8 16h16"/>
+  </g>
+</svg>

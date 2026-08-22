@@ -1,0 +1,192 @@
+/* =============================================================================
+   Admin forms: job create/edit and login
+   -----------------------------------------------------------------------------
+   Scoped as a CSS module so the field grid, the slug preview and the collapsed
+   optional section cannot leak onto any other page. Shared primitives
+   (`.jpa-input`, `.jpa-btn`, `.jpa-error`) stay global in admin.css, because
+   both islands and Astro components need them.
+   ========================================================================== */
+
+.form {
+  display: grid;
+  gap: var(--jp-space-5);
+}
+
+.group {
+  display: grid;
+  gap: var(--jp-space-4);
+}
+
+/* Two columns only where the fields are genuinely short. A salary and a job
+   type side by side is denser; a description next to anything is not. */
+.pair {
+  display: grid;
+  gap: var(--jp-space-4);
+}
+
+@media (min-width: 700px) {
+  .pair {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.field {
+  min-width: 0;
+}
+
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--jp-space-2);
+}
+
+/* The counter only mounts near the cap, so it must not reserve space when
+   absent — hence no fixed width. */
+.counter {
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.counterNear {
+  color: var(--jp-accent-text);
+  font-weight: var(--jp-weight-semibold);
+}
+
+.counterOver {
+  color: var(--jp-danger);
+  font-weight: var(--jp-weight-semibold);
+}
+
+/* --- Slug panel ---------------------------------------------------------- */
+
+.slugPanel {
+  padding: var(--jp-space-3);
+  background: var(--jp-surface-sunken);
+  border: 1px solid var(--jp-border);
+  border-radius: var(--jp-radius-sm);
+}
+
+.slugRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--jp-space-2);
+  font-size: var(--jp-text-xs);
+  color: var(--jp-ink-muted);
+}
+
+.slugValue {
+  font-family: var(--jp-font-mono);
+  font-size: var(--jp-text-xs);
+  color: var(--jp-ink);
+  word-break: break-all;
+}
+
+.slugWarning {
+  display: flex;
+  gap: var(--jp-space-1);
+  margin-top: var(--jp-space-2);
+  padding: var(--jp-space-2);
+  background: var(--jp-accent-tint);
+  border-radius: var(--jp-radius-xs);
+  color: var(--jp-ink);
+  font-size: var(--jp-text-xs);
+}
+
+/* --- Optional details ---------------------------------------------------- */
+
+.details {
+  border: 1px solid var(--jp-border);
+  border-radius: var(--jp-radius-sm);
+  background: var(--jp-surface);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: var(--jp-space-2);
+  min-height: var(--jp-touch-min);
+  padding: 0 var(--jp-space-4);
+  font-size: var(--jp-text-sm);
+  font-weight: var(--jp-weight-medium);
+  cursor: pointer;
+}
+
+.summaryHint {
+  color: var(--jp-ink-muted);
+  font-weight: var(--jp-weight-regular);
+  font-size: var(--jp-text-xs);
+}
+
+.detailsBody {
+  display: grid;
+  gap: var(--jp-space-4);
+  padding: var(--jp-space-4);
+  border-top: 1px solid var(--jp-border);
+}
+
+/* --- Footer ------------------------------------------------------------- */
+
+.footer {
+  display: flex;
+  flex-wrap: wrap-reverse;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--jp-space-3);
+  padding-top: var(--jp-space-4);
+  border-top: 1px solid var(--jp-border);
+}
+
+.footerNote {
+  flex: 1 1 14rem;
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-xs);
+}
+
+/* --- Login --------------------------------------------------------------- */
+
+.loginShell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--jp-space-6) var(--jp-gutter);
+}
+
+.loginCard {
+  width: 100%;
+  max-width: 25rem;
+  padding: var(--jp-space-6);
+  background: var(--jp-surface);
+  border: 1px solid var(--jp-border);
+  border-radius: var(--jp-radius-lg);
+  box-shadow: var(--jp-shadow-sm);
+}
+
+.loginBrand {
+  margin-bottom: var(--jp-space-5);
+}
+
+.loginTitle {
+  font-size: var(--jp-text-lg);
+  font-weight: var(--jp-weight-semibold);
+  letter-spacing: var(--jp-tracking-snug);
+}
+
+.loginLede {
+  margin-top: var(--jp-space-1);
+  color: var(--jp-ink-muted);
+  font-size: var(--jp-text-sm);
+}
+
+.loginFields {
+  display: grid;
+  gap: var(--jp-space-4);
+}
+
+.loginSubmit {
+  width: 100%;
+  margin-top: var(--jp-space-2);
+}

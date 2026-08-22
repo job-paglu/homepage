@@ -1,0 +1,151 @@
+# =============================================================================
+# Apply database migrations — manual, one shot, on purpose.
+# -----------------------------------------------------------------------------
+# WHY THIS EXISTS
+#   Production runs with RUN_MIGRATIONS_ON_START=false. On a serverless host the
+#   alternative is that EVERY cold instance attempts the migration check before
+#   answering its first request. The runner takes a Postgres advisory lock, so
+#   that is safe — but safe is not free: it puts a lock round-trip on the
+#   request-serving critical path, it makes a failed migration surface as a
+#   platform deploy failure rather than as a migration failure, and it means the
+#   thing that changed your schema has no log you can find afterwards.
+#
+#   Migrations are therefore a deliberate action with an output someone reads.
+#   That is this workflow.
+#
+# THE TWO CONNECTION STRINGS — GETTING THIS WRONG IS THE MAIN HAZARD
+#   Neon gives you a POOLED string (hostname contains `-pooler`) and a DIRECT
+#   one. This job needs the DIRECT one. Migrations run DDL inside a transaction
+#   and hold a session-level advisory lock; a transaction-mode pooler does not
+#   guarantee that two statements land on the same backend session, so a
+#   migration through the pooler fails intermittently and unreadably.
+#
+#   The application uses the POOLED string. Do not put the same value in both.
+#
+# WHAT YOU MUST CONFIGURE
+#   Settings -> Environments -> `production` (an environment, not a plain secret,
+#   so a required reviewer can be attached to it):
+#
+#     DATABASE_URL_DIRECT   Secret. The DIRECT Neon connection string, with
+#                           sslmode=require. Never the pooled one.
+#
+#   Using a GitHub Environment rather than a repository secret is the point: it
+#   is what lets you require an approval before anything touches the production
+#   schema, and it scopes the credential to the one job that needs it.
+#
+# ORDER OF OPERATIONS FOR A REAL DEPLOY
+#   1. Run this with dry_run = true and read the pending list.
+#   2. Take a Neon branch or backup if the migration is not purely additive.
+#      Migrations are forward-only (docs/DATABASE.md); there is no rollback.
+#   3. Run this with dry_run = false.
+#   4. Then deploy the code.
+#   Additive-first migrations are what make step 4 reorderable. A migration that
+#   drops or rewrites a column cannot be undone by redeploying the old code.
+#
+# HONEST STATUS: never executed.
+# =============================================================================
+
+name: Migrate database
+
+# Manual only. There is no push trigger and there should never be one: an
+# automatic schema change is a schema change nobody chose to make.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Report pending migrations without applying them"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# Never two migration runs at once. The advisory lock would make it safe and the
+# log would make it incomprehensible.
+concurrency:
+  group: migrate-database
+  cancel-in-progress: false
+
+env:
+  GO_VERSION: "1.24"
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+
+    # Attach required reviewers to this environment in the repository settings if
+    # you want an approval gate before the schema changes.
+    environment: production
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
+
+      # Fail early and specifically. "connection refused" twenty lines later is a
+      # worse message than this one.
+      - name: Check the connection string is the direct endpoint
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECT }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error title=DATABASE_URL_DIRECT is not set::Add it as a secret on the production environment. It must be Neon's DIRECT (non-pooled) connection string."
+            exit 1
+          fi
+          # The host is the only part inspected, and it is never printed.
+          case "$DATABASE_URL" in
+            *-pooler*)
+              echo "::error title=That is the pooled connection string::The hostname contains '-pooler'. Migrations need the DIRECT endpoint: DDL in a transaction and a session-level advisory lock both require every statement on the same backend session, which a transaction-mode pooler does not guarantee. Use the direct string here and keep the pooled one for the application."
+              exit 1 ;;
+          esac
+          case "$DATABASE_URL" in
+            *sslmode=require*) : ;;
+            *) echo "::error::DATABASE_URL must carry sslmode=require. Neon requires TLS, and a string that disables it would send credentials in plaintext."; exit 1 ;;
+          esac
+          echo "Connection string shape looks correct. Value not echoed."
+
+      # `adminctl migrate` rather than `go run ./cmd/server`: the server would
+      # need ADMIN_SESSION_SECRET and FRONTEND_URL it has no use for here, and
+      # inventing a session secret for a migration job is how an invented secret
+      # becomes a real one.
+      - name: Report pending migrations
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECT }}
+        run: go run ./cmd/adminctl migrate -dry-run
+
+      - name: Apply migrations
+        if: ${{ inputs.dry_run == false }}
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECT }}
+        run: go run ./cmd/adminctl migrate
+
+      # Prove it, rather than trusting the exit code. A migration that "succeeded"
+      # while recording nothing is the failure mode worth catching.
+      - name: Confirm nothing is pending
+        if: ${{ inputs.dry_run == false }}
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECT }}
+        run: go run ./cmd/adminctl migrate -dry-run
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Migration run"
+            echo
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Mode | ${{ inputs.dry_run && 'dry run (nothing applied)' || 'applied' }} |"
+            echo "| Endpoint | direct (non-pooled), verified by shape |"
+            echo
+            echo "Migrations are forward-only. To reverse a schema change, write a"
+            echo "new forward migration. See docs/DATABASE.md."
+          } >> "$GITHUB_STEP_SUMMARY"

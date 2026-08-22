@@ -1,0 +1,91 @@
+# =============================================================================
+# Job Paglu - editor configuration
+# -----------------------------------------------------------------------------
+# Purpose: make every editor agree on encoding, line endings and indentation, so
+# a diff shows what someone changed rather than which IDE they used.
+#
+# This file governs what an editor WRITES. `.gitattributes` governs what git
+# STORES. The two are deliberately aligned, including the one exception:
+# `*.ps1` is CRLF in both. If you change one, change the other in the same
+# commit, or you get a file that is normalised on checkout and re-dirtied on
+# save forever.
+#
+# Reference: https://editorconfig.org  (most editors need a plugin; VS Code,
+# Visual Studio, JetBrains IDEs and Vim/Neovim plugins all support it.)
+# =============================================================================
+
+root = true
+
+# --- Defaults for everything -------------------------------------------------
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# --- Web / config: 2-space, as above ----------------------------------------
+# Listed explicitly so the intent survives a future change to the [*] defaults.
+[*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,astro,css,scss,json,jsonc,json5,yml,yaml,html,svg,toml}]
+indent_style = space
+indent_size = 2
+
+# --- Go: tabs, non-negotiable ------------------------------------------------
+# gofmt emits tabs. Configuring spaces here would mean every save fights the
+# formatter. `indent_size = 4` only sets how wide a tab is DISPLAYED.
+[*.go]
+indent_style = tab
+indent_size = 4
+
+[go.mod]
+indent_style = tab
+indent_size = 4
+
+# --- SQL ---------------------------------------------------------------------
+[*.sql]
+indent_style = space
+indent_size = 2
+
+# --- Shell scripts -----------------------------------------------------------
+# LF is mandatory, not stylistic: a CRLF line ending after the shebang makes the
+# kernel look for an interpreter literally named `bash\r`, and the script dies
+# with "bad interpreter: No such file or directory".
+[*.{sh,bash}]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+
+# --- PowerShell --------------------------------------------------------------
+# CRLF. Windows PowerShell 5.1's parser and the ISE are both happier with it,
+# and every .ps1 in this repo is a Windows-first entry point. Matched by
+# `*.ps1 text eol=crlf` in .gitattributes.
+[*.{ps1,psm1,psd1}]
+indent_style = space
+indent_size = 2
+end_of_line = crlf
+
+# --- Makefiles ---------------------------------------------------------------
+# make requires a literal tab before a recipe line. Spaces produce
+# "missing separator". There is no Makefile in the repo today; the rule is here
+# so adding one cannot be broken by the 2-space default above.
+[{Makefile,makefile,GNUmakefile,*.mk}]
+indent_style = tab
+indent_size = 4
+
+# --- Markdown ----------------------------------------------------------------
+# Trailing whitespace is significant in Markdown: two trailing spaces are a
+# hard line break. Trimming them would silently rewrite documentation, so the
+# global trim is switched off here.
+[*.md]
+trim_trailing_whitespace = false
+indent_style = space
+indent_size = 2
+
+# --- Files not authored by us -----------------------------------------------
+# Lockfiles are generated. Do not let an editor reformat them.
+[{package-lock.json,pnpm-lock.yaml,yarn.lock,go.sum}]
+indent_style = unset
+indent_size = unset
+insert_final_newline = unset
+trim_trailing_whitespace = false
