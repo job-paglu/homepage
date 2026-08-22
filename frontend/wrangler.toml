@@ -58,8 +58,8 @@ migrations_dir = "migrations"
 # same Access team from authenticating here.
 [vars]
 APP_ENV = "production"
-ACCESS_TEAM_DOMAIN = "REPLACE-TEAM.cloudflareaccess.com"
-ACCESS_AUD = "REPLACE_WITH_ACCESS_APPLICATION_AUD_TAG"
+ACCESS_TEAM_DOMAIN = "old-morning-ea11.cloudflareaccess.com"
+ACCESS_AUD = "902d77604295d0d5a1bb7351b22a850cb9b32532e1c8d50a47e105cc3fea9180"
 ALLOW_HTTP_APPLY_URLS = "false"
 
 # Note the absence of ACCESS_DEV_BYPASS_EMAIL. The bypass is gated on
@@ -70,6 +70,6 @@ ALLOW_HTTP_APPLY_URLS = "false"
 
 [env.preview.vars]
 APP_ENV = "production"
-ACCESS_TEAM_DOMAIN = "REPLACE-TEAM.cloudflareaccess.com"
-ACCESS_AUD = "REPLACE_WITH_PREVIEW_ACCESS_APPLICATION_AUD_TAG"
+ACCESS_TEAM_DOMAIN = "old-morning-ea11.cloudflareaccess.com"
+ACCESS_AUD = "902d77604295d0d5a1bb7351b22a850cb9b32532e1c8d50a47e105cc3fea9180"
 ALLOW_HTTP_APPLY_URLS = "false"
