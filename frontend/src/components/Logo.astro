@@ -1,15 +1,17 @@
 ---
 /**
- * The Job Paglu wordmark.
+ * The Job Paglu lockup: the brand mascot avatar + the "Job Paglu" wordmark.
  *
- * Text plus one deliberately trivial glyph: a circle with a single meridian —
- * a globe reduced to the fewest strokes that still read as one at 16px. No
- * image request, no web font, no layout shift, and it inherits `currentColor`
- * so the same component works on paper and on the emerald footer.
+ * The avatar is the real Job Paglu logo used on the apex site jobpaglu.eu.cc
+ * (its profile avatar) — the orange mascot at a laptop — served locally from
+ * public/brand/job-paglu-logo.jpg rather than hotlinked, so there is no external
+ * request and no CSP allowance to make. It is shown as a circle, exactly as the
+ * apex renders it (an avatar image beside the name), so both properties carry
+ * the same logo.
  *
- * The two-tone treatment (ink + emerald) is what makes it a lockup rather than
- * a heading, and is deliberately unlike the blue single-weight wordmarks of
- * LinkedIn / Indeed / Glassdoor / We Work Remotely.
+ * NOTE: this is a raster logo with baked-in "Job Paglu"/"Remote Jobs Made Fun"
+ * text. If a crisp vector or a transparent-background version becomes available,
+ * swap the file — the markup does not change.
  */
 import styles from '@styles/logo.module.css';
 import { copy } from '@lib/copy';
@@ -19,7 +21,7 @@ interface Props {
   /** Target for the home link. `false` renders a non-link mark. */
   href?: string | false;
   size?: 'md' | 'lg';
-  /** Light-on-dark treatment for the emerald footer. */
+  /** Kept for API compatibility; the avatar is a fixed image, so it is a no-op. */
   inverse?: boolean;
   /** Force a `<span>` — for use inside a heading that is already a link. */
   as?: 'a' | 'span';
@@ -49,20 +51,17 @@ const classes = [styles.logo, size === 'lg' ? styles.lg : null, inverse ? styles
   href={linkHref}
   aria-label={linkHref === undefined ? undefined : copy.nav.logoHome}
 >
-  {/* Decorative: the wordmark beside it already carries the accessible name. */}
-  <svg
+  {/* Decorative: the wordmark beside it already carries the accessible name.
+      The real Job Paglu mascot logo, shown as a circular avatar like the apex. */}
+  <img
     class={styles.glyph}
-    viewBox="0 0 20 20"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="1.6"
-    stroke-linecap="round"
-    aria-hidden="true"
-    focusable="false"
-  >
-    <circle cx="10" cy="10" r="8"></circle>
-    <path d="M10 2c3 2.6 3 12.8 0 16M2 10h16"></path>
-  </svg>
+    src="/brand/job-paglu-logo.jpg"
+    alt=""
+    width="64"
+    height="64"
+    loading="eager"
+    decoding="async"
+  />
   <span>
     <span class={styles.first}>{copy.site.wordmarkFirst}</span>{' '}<span
       class={styles.second}>{copy.site.wordmarkSecond}</span

@@ -19,7 +19,7 @@ export const copy = {
     /** og:locale wants the underscore form, not the BCP-47 hyphen form. */
     ogLocale: 'en_US',
     htmlLang: 'en',
-    tagline: 'International jobs, one clean list.',
+    tagline: 'We Provide Free Jobs',   // matches the apex brand site jobpaglu.eu.cc
   },
 
   nav: {
