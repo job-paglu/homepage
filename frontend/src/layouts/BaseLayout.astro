@@ -77,12 +77,34 @@ const THEME_COLOR = '#08080c';
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {/* No-flash theme init. Runs synchronously, before first paint, so a forced
+        theme is applied to <html> before any CSS is evaluated — there is no
+        flash of the wrong palette. It also adds `jp-js`, which reveals the theme
+        toggle (a no-JavaScript visitor follows their OS and never sees an inert
+        button). `is:inline` keeps it a real inline script rather than a deferred
+        bundled module, which would run too late to prevent the flash. Kept tiny
+        and static so a future CSP could allow it by hash. The theme cookie and
+        the whole cascade are documented in styles/tokens.css. */}
+    <script is:inline>
+      (function () {
+        var e = document.documentElement;
+        e.classList.add('jp-js');
+        try {
+          var m = document.cookie.match(/(?:^|;\s*)jp_theme=(light|dark)/);
+          if (m) e.setAttribute('data-theme', m[1]);
+        } catch (err) {}
+      })();
+    </script>
     {/* System font stack (tokens.css), so there is nothing to preconnect to and
         no font-display trade-off to make. */}
-    {/* A single dark theme, matching the apex brand site jobpaglu.eu.cc. The
-        document declares dark so native controls, scrollbars and form fields
-        render against the dark palette they were contrast-checked for. */}
-    <meta name="color-scheme" content="dark" />
+    {/* Both themes, dark-first — same declaration the apex site uses. This is
+        the pre-CSS hint; the authoritative `color-scheme` is set per-theme on
+        :root in tokens.css, so native controls, scrollbars and form fields match
+        whichever palette is active. */}
+    <meta name="color-scheme" content="dark light" />
+    {/* theme-color is the mobile address-bar tint. It starts dark and the theme
+        toggle's script keeps it in sync with the active theme (a <meta> cannot
+        read a CSS variable, so JS is the only way to change it after load). */}
     <meta name="theme-color" content={THEME_COLOR} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <SeoHead

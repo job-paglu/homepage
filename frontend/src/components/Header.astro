@@ -15,6 +15,7 @@
 import Button from '@components/Button.astro';
 import Logo from '@components/Logo.astro';
 import MobileMenu from '@components/MobileMenu.astro';
+import ThemeToggle from '@components/ThemeToggle.astro';
 import styles from '@styles/header.module.css';
 import { copy } from '@lib/copy';
 import { isCurrentPath, ROUTES, OWNED_EXTERNAL } from '@lib/urls';
@@ -64,7 +65,8 @@ const links: ReadonlyArray<{
       <Logo />
     </div>
 
-    <nav class={styles.desktopNav} aria-label={copy.nav.primaryLabel}>
+    <div class={styles.actions}>
+      <nav class={styles.desktopNav} aria-label={copy.nav.primaryLabel}>
       <ul class={styles.list}>
         {
           links.map((link) => (
@@ -90,9 +92,11 @@ const links: ReadonlyArray<{
           </Button>
         </li>
       </ul>
-    </nav>
+      </nav>
 
-    <MobileMenu links={links} currentPath={currentPath} />
+      <ThemeToggle />
+      <MobileMenu links={links} currentPath={currentPath} />
+    </div>
   </div>
 
   <noscript>

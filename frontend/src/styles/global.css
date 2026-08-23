@@ -57,12 +57,14 @@ body {
 }
 
 /* The apex brand site's signature backdrop: two soft accent glows at the top,
-   fading into the dark base. Rendered on a FIXED ::before layer rather than via
-   `background-attachment: fixed` (which is janky on mobile and disables GPU
-   compositing). It sits behind everything (z -1) and never intercepts clicks.
-   Pure decoration — the page is fully legible with it removed, and it collapses
-   to the flat base under `prefers-reduced-motion` is not needed since it does
-   not animate. */
+   fading into the base. Built entirely from semantic tokens (--jp-brand-tint,
+   --jp-accent-tint, --jp-surface-sunken, --jp-paper), so it re-tints itself for
+   light and dark with no theme-specific rule here — a cyan/indigo wash on a
+   near-black base in dark, the same wash on a near-white base in light.
+   Rendered on a FIXED ::before layer rather than via `background-attachment:
+   fixed` (which is janky on mobile and disables GPU compositing). It sits behind
+   everything (z -1) and never intercepts clicks. Pure decoration — the page is
+   fully legible with it removed, and it does not animate. */
 body::before {
   content: '';
   position: fixed;

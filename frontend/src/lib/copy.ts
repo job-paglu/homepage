@@ -48,6 +48,16 @@ export const copy = {
     /** Link to the resume builder on the resume. subdomain (redirects to the app). */
     resume: 'Resume Builder',
     resumeAria: 'Build a resume on resume.jobpaglu.eu.cc — opens in a new tab',
+    /**
+     * Light/dark theme control. `themeToggle` is the stable label used before
+     * JavaScript runs (the server cannot know the resolved theme — the page is
+     * edge-cached, so the choice lives client-side in a cookie). Once hydrated,
+     * the script narrows the label to the specific action, `themeToLight` /
+     * `themeToDark`, so a screen-reader user is told what pressing it will do.
+     */
+    themeToggle: 'Toggle light or dark theme',
+    themeToLight: 'Switch to light theme',
+    themeToDark: 'Switch to dark theme',
   },
 
   home: {

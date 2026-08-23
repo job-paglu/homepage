@@ -29,15 +29,27 @@
      --jp-border     rgba(255,255,255,.09) is decorative; a border that CARRIES
                                 MEANING uses --jp-border-strong (.18).
 
-   This is a single-theme (dark) design. There is deliberately no light variant:
-   the brand it matches is dark, and shipping a second palette would double the
-   contrast surface for no benefit. `color-scheme: dark` is declared so native
-   controls, scrollbars and form fields render dark to match.
+   TWO themes, one brand. Dark is the default (the apex site declares
+   `color-scheme: dark light` — dark-first — so a visitor with no OS preference
+   sees dark on both properties). A light palette activates when the OS asks for
+   light, and either theme can be forced by a `data-theme` attribute on <html>
+   that a preference cookie sets. The cascade that makes all three states work is
+   at the very bottom of this file; everything a component references is a
+   `--jp-*` semantic token, so redefining those tokens per theme re-skins the
+   whole app without touching a single component.
+
+   The cookie is `jp_theme` (values `light` / `dark`), written with
+   `Domain=jobpaglu.eu.cc` in production so the choice is SHARED across the apex
+   `jobpaglu.eu.cc` and this app on `home.jobpaglu.eu.cc`. It holds only a
+   presentation preference — never anything sensitive — so cross-subdomain
+   sharing is exactly the intent, unlike the `__Host-` session cookie (P-004).
+
+   Colour tokens live in the theme blocks at the bottom. Everything NON-colour
+   (type, space, radius, motion, layout) is theme-independent and stays in the
+   base `:root` below.
    ========================================================================== */
 
 :root {
-  color-scheme: dark;
-
   /* --- Raw palette -------------------------------------------------------- */
   /* Only the semantic layer below should be referenced by components. */
   --jp-c-base-950: #08080c;   /* page background            */
@@ -70,41 +82,9 @@
   --jp-c-white-09: rgba(255, 255, 255, 0.09);
   --jp-c-white-18: rgba(255, 255, 255, 0.18);
 
-  /* --- Semantic colour ---------------------------------------------------- */
-  --jp-paper: var(--jp-c-base-950);
-  --jp-surface: var(--jp-c-base-850);
-  --jp-surface-sunken: var(--jp-c-base-900);
-  --jp-surface-raised: var(--jp-c-base-800);
-
-  --jp-ink: var(--jp-c-text-100);
-  --jp-ink-soft: var(--jp-c-text-200);
-  --jp-ink-muted: var(--jp-c-text-300);
-  --jp-ink-faint: var(--jp-c-text-500);
-  /* Dark ink for text placed on the light cyan --jp-brand (buttons). */
-  --jp-ink-inverse: var(--jp-c-cyan-ink);
-
-  --jp-brand: var(--jp-c-cyan-400);
-  --jp-brand-hover: var(--jp-c-cyan-300);
-  --jp-brand-active: var(--jp-c-cyan-500);
-  --jp-brand-tint: rgba(34, 211, 238, 0.15);
-  --jp-brand-wash: rgba(34, 211, 238, 0.08);
-
-  /* Indigo secondary accent. Unlike the old amber this IS text-safe on the dark
-     base (~5.5:1), so it can colour a foreground as well as a background. */
-  --jp-accent: var(--jp-c-indigo-400);
-  --jp-accent-tint: rgba(129, 140, 248, 0.15);
-  --jp-accent-text: var(--jp-c-indigo-300);
-
-  --jp-border: var(--jp-c-white-09);
-  --jp-border-strong: var(--jp-c-white-18);
-
-  --jp-danger: var(--jp-c-danger-400);
-  --jp-danger-tint: var(--jp-c-danger-tint);
-  --jp-success: var(--jp-c-success-400);
-  --jp-success-tint: var(--jp-c-success-tint);
-
-  --jp-focus: var(--jp-c-cyan-400);
-  --jp-selection: rgba(34, 211, 238, 0.28);
+  /* Semantic COLOUR tokens are defined per-theme at the bottom of this file
+     (search "Theme cascade"), not here, because they are the only tokens that
+     differ between light and dark. Everything below is theme-independent. */
 
   /* --- Type -------------------------------------------------------------- */
   /* System stack: zero network requests, zero layout shift, and it already
@@ -228,6 +208,162 @@
   --jp-z-overlay: 400;
   --jp-z-modal: 500;
   --jp-z-toast: 600;
+}
+
+/* =============================================================================
+   Theme cascade — the only place light and dark differ
+   -----------------------------------------------------------------------------
+   Three states, resolved by ordinary CSS specificity + source order:
+
+     1. No preference at all      -> DARK    (matches the apex's dark-first
+                                              `color-scheme: dark light`)
+     2. OS asks for light         -> LIGHT   (unless the visitor forced dark)
+     3. Visitor clicked the button-> whatever `data-theme` says, always wins
+
+   How the four rules below combine:
+     - `:root, :root[data-theme='dark']`  is DARK. It carries the no-preference
+       default AND the explicit "force dark".
+     - the `@media (prefers-color-scheme: light)` rule is LIGHT, but excludes
+       `[data-theme='dark']`, so a visitor who forced dark on a light OS stays
+       dark.
+     - `:root[data-theme='light']` is LIGHT and, being an attribute selector,
+       out-specifies the bare `:root` dark default, so "force light" wins on a
+       dark OS too.
+
+   The `data-theme` attribute is set (only when a `jp_theme` cookie exists) by a
+   tiny inline script in BaseLayout's <head>, before first paint, so there is no
+   flash. With no cookie the attribute is absent and the OS media query governs.
+   ========================================================================== */
+
+/* DARK — the default, and the explicit override. */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --jp-paper: var(--jp-c-base-950);
+  --jp-surface: var(--jp-c-base-850);
+  --jp-surface-sunken: var(--jp-c-base-900);
+  --jp-surface-raised: var(--jp-c-base-800);
+
+  --jp-ink: var(--jp-c-text-100);
+  --jp-ink-soft: var(--jp-c-text-200);
+  --jp-ink-muted: var(--jp-c-text-300);
+  --jp-ink-faint: var(--jp-c-text-500);
+  /* Dark ink for text placed on the light cyan --jp-brand (buttons). */
+  --jp-ink-inverse: var(--jp-c-cyan-ink);
+
+  --jp-brand: var(--jp-c-cyan-400);
+  --jp-brand-hover: var(--jp-c-cyan-300);
+  --jp-brand-active: var(--jp-c-cyan-500);
+  --jp-brand-tint: rgba(34, 211, 238, 0.15);
+  --jp-brand-wash: rgba(34, 211, 238, 0.08);
+
+  /* Indigo secondary accent. Unlike the old amber this IS text-safe on the dark
+     base (~5.5:1), so it can colour a foreground as well as a background. */
+  --jp-accent: var(--jp-c-indigo-400);
+  --jp-accent-tint: rgba(129, 140, 248, 0.15);
+  --jp-accent-text: var(--jp-c-indigo-300);
+
+  --jp-border: var(--jp-c-white-09);
+  --jp-border-strong: var(--jp-c-white-18);
+
+  --jp-danger: var(--jp-c-danger-400);
+  --jp-danger-tint: var(--jp-c-danger-tint);
+  --jp-success: var(--jp-c-success-400);
+  --jp-success-tint: var(--jp-c-success-tint);
+
+  --jp-focus: var(--jp-c-cyan-400);
+  --jp-selection: rgba(34, 211, 238, 0.28);
+  --jp-shadow-focus: 0 0 0 3px rgba(34, 211, 238, 0.35);
+}
+
+/* LIGHT — same brand (cyan primary, indigo secondary) rebalanced for a light
+   base. Hex is literal here because these are the source of truth; a component
+   still never sees a raw colour. Contrast checked by hand on --jp-paper #f7f8fb:
+     --jp-ink        #0f1420  ~17 : 1   (AAA)
+     --jp-ink-muted  #55607a  ~5.7: 1   (AA)
+     --jp-ink-faint  #616c86  ~4.7: 1   (AA, de-emphasised metadata only)
+     --jp-brand      #0e7490  ~4.9: 1   both as a link fg AND as a button bg
+                                        carrying white --jp-ink-inverse (~4.9:1)
+     --jp-accent     #4f46e5  ~6.5: 1   (AA) indigo text-safe on light too */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    color-scheme: light;
+
+    --jp-paper: #f7f8fb;
+    --jp-surface: #ffffff;
+    --jp-surface-sunken: #eef1f6;
+    --jp-surface-raised: #ffffff;
+
+    --jp-ink: #0f1420;
+    --jp-ink-soft: #2b3345;
+    --jp-ink-muted: #55607a;
+    --jp-ink-faint: #616c86;
+    --jp-ink-inverse: #ffffff;
+
+    --jp-brand: #0e7490;
+    --jp-brand-hover: #0891b2;
+    --jp-brand-active: #155e75;
+    --jp-brand-tint: rgba(8, 145, 178, 0.12);
+    --jp-brand-wash: rgba(8, 145, 178, 0.06);
+
+    --jp-accent: #4f46e5;
+    --jp-accent-tint: rgba(79, 70, 229, 0.12);
+    --jp-accent-text: #4338ca;
+
+    --jp-border: rgba(15, 20, 32, 0.12);
+    --jp-border-strong: rgba(15, 20, 32, 0.22);
+
+    --jp-danger: #dc2626;
+    --jp-danger-tint: rgba(220, 38, 38, 0.1);
+    --jp-success: #059669;
+    --jp-success-tint: rgba(5, 150, 105, 0.12);
+
+    --jp-focus: #0891b2;
+    --jp-selection: rgba(8, 145, 178, 0.22);
+    --jp-shadow-focus: 0 0 0 3px rgba(8, 145, 178, 0.3);
+  }
+}
+
+/* LIGHT, forced — identical values, but an attribute selector so it beats both
+   the bare `:root` dark default (on a dark OS) and equal-specificity source
+   order. Kept in sync with the media block above by hand; they are the same
+   palette by definition. */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --jp-paper: #f7f8fb;
+  --jp-surface: #ffffff;
+  --jp-surface-sunken: #eef1f6;
+  --jp-surface-raised: #ffffff;
+
+  --jp-ink: #0f1420;
+  --jp-ink-soft: #2b3345;
+  --jp-ink-muted: #55607a;
+  --jp-ink-faint: #616c86;
+  --jp-ink-inverse: #ffffff;
+
+  --jp-brand: #0e7490;
+  --jp-brand-hover: #0891b2;
+  --jp-brand-active: #155e75;
+  --jp-brand-tint: rgba(8, 145, 178, 0.12);
+  --jp-brand-wash: rgba(8, 145, 178, 0.06);
+
+  --jp-accent: #4f46e5;
+  --jp-accent-tint: rgba(79, 70, 229, 0.12);
+  --jp-accent-text: #4338ca;
+
+  --jp-border: rgba(15, 20, 32, 0.12);
+  --jp-border-strong: rgba(15, 20, 32, 0.22);
+
+  --jp-danger: #dc2626;
+  --jp-danger-tint: rgba(220, 38, 38, 0.1);
+  --jp-success: #059669;
+  --jp-success-tint: rgba(5, 150, 105, 0.12);
+
+  --jp-focus: #0891b2;
+  --jp-selection: rgba(8, 145, 178, 0.22);
+  --jp-shadow-focus: 0 0 0 3px rgba(8, 145, 178, 0.3);
 }
 
 /* Honour the OS setting. Anything that moves must still be usable when it

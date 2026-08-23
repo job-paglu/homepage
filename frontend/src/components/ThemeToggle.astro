@@ -1,0 +1,137 @@
+---
+/**
+ * Light / dark theme toggle.
+ *
+ * No framework — a real <button> plus a small vanilla-TypeScript module, in the
+ * same spirit as MobileMenu and FreeServicePopup (the public site ships zero
+ * framework JavaScript).
+ *
+ * How the theme is decided (full cascade lives in styles/tokens.css):
+ *   - No preference       -> dark (the apex's dark-first default)
+ *   - OS asks for light    -> light
+ *   - This button clicked  -> an explicit choice on <html data-theme>, which
+ *                             wins over the OS and is remembered in a cookie.
+ *
+ * SYNC ACROSS SUBDOMAINS. The choice is stored in a `jp_theme` cookie written
+ * with `Domain=jobpaglu.eu.cc` in production, so it is shared between the apex
+ * `jobpaglu.eu.cc` and this app on `home.jobpaglu.eu.cc` — flip the theme on one
+ * and the other follows on its next load. The cookie holds only "light"/"dark",
+ * never anything sensitive, so cross-subdomain sharing is the intent (unlike the
+ * `__Host-` session cookie, which must never carry a Domain — see P-004). On
+ * localhost and *.pages.dev the Domain is omitted so the cookie still works.
+ *
+ * NO FLASH. A tiny inline script in BaseLayout's <head> reads the cookie and
+ * sets `data-theme` before first paint, and also adds a `jp-js` class to <html>
+ * that reveals this button — so a no-JavaScript visitor (who simply follows
+ * their OS) never sees an inert control, and there is no layout shift.
+ */
+import styles from '@styles/themeToggle.module.css';
+import { copy } from '@lib/copy';
+---
+
+<button
+  type="button"
+  class={styles.toggle}
+  data-jp-theme-toggle
+  aria-label={copy.nav.themeToggle}
+  title={copy.nav.themeToggle}
+  data-label-light={copy.nav.themeToLight}
+  data-label-dark={copy.nav.themeToDark}
+>
+  {/* Two icons; CSS shows the one for the CURRENT theme (a sun in dark mode,
+      meaning "you are dark", and a moon in light mode). Decorative — the button
+      carries its accessible name on aria-label. */}
+  <svg
+    class={styles.iconSun}
+    aria-hidden="true"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <circle cx="12" cy="12" r="4"></circle>
+    <path
+      d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"
+    ></path>
+  </svg>
+  <svg
+    class={styles.iconMoon}
+    aria-hidden="true"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+  </svg>
+</button>
+
+<script>
+  const btn = document.querySelector<HTMLButtonElement>('[data-jp-theme-toggle]');
+
+  if (btn) {
+    const root = document.documentElement;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+
+    // Labels come from the same copy module as the markup, read back off the DOM
+    // so this script holds no English of its own.
+    const labelLight = btn.dataset.labelLight ?? '';
+    const labelDark = btn.dataset.labelDark ?? '';
+
+    // The `theme-color` meta (the mobile address-bar tint) cannot read a CSS
+    // custom property, so these two literals mirror --jp-c-base-950 and
+    // --jp-paper (light) in tokens.css. Change them together.
+    const CHROME = { dark: '#08080c', light: '#f7f8fb' } as const;
+
+    /** The theme actually on screen: an explicit override if set, else the OS. */
+    const resolved = (): 'dark' | 'light' =>
+      (root.getAttribute('data-theme') as 'dark' | 'light' | null) ??
+      (mq.matches ? 'dark' : 'light');
+
+    /** Update the address-bar tint and the button's accessible name (which names
+        the action the NEXT press performs). */
+    const reflect = (theme: 'dark' | 'light'): void => {
+      const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+      if (meta) meta.content = CHROME[theme];
+      const next = theme === 'dark' ? labelLight : labelDark;
+      btn.setAttribute('aria-label', next);
+      btn.setAttribute('title', next);
+    };
+
+    const persist = (theme: 'dark' | 'light'): void => {
+      const host = location.hostname;
+      let domain = '';
+      // Share across the whole brand domain in production; host-only elsewhere,
+      // because a browser silently drops a cookie whose Domain does not match.
+      if (/(^|\.)jobpaglu\.eu\.cc$/.test(host)) domain = '; Domain=jobpaglu.eu.cc';
+      else if (/(^|\.)jobpaglu\.com$/.test(host)) domain = '; Domain=jobpaglu.com';
+      const secure = location.protocol === 'https:' ? '; Secure' : '';
+      // One year; SameSite=Lax is fine for a preference cookie (no CSRF surface).
+      document.cookie = `jp_theme=${theme}; Path=/; Max-Age=31536000; SameSite=Lax${secure}${domain}`;
+    };
+
+    reflect(resolved());
+
+    btn.addEventListener('click', () => {
+      const next = resolved() === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      persist(next);
+      reflect(next);
+    });
+
+    // If the visitor is following the OS (no explicit override) and flips their
+    // system theme, the palette updates itself via the media query — but the
+    // address bar and the button label still need a nudge.
+    mq.addEventListener('change', () => {
+      if (!root.getAttribute('data-theme')) reflect(resolved());
+    });
+  }
+</script>

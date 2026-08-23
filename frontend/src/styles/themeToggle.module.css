@@ -1,0 +1,61 @@
+/* The light/dark toggle button.
+
+   Hidden until the inline head script adds `jp-js` to <html>, so a
+   no-JavaScript visitor (who simply follows their OS) never meets an inert
+   control. The head script runs before first paint, so there is no flash of the
+   button appearing and no layout shift. */
+
+.toggle {
+  display: none;
+}
+
+:global(:root.jp-js) .toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Meets the 44px touch floor like every other header control. */
+  width: var(--jp-control-h);
+  height: var(--jp-control-h);
+  border-radius: var(--jp-radius-md);
+  color: var(--jp-ink-soft);
+  transition:
+    background-color var(--jp-duration-fast) var(--jp-ease),
+    color var(--jp-duration-fast) var(--jp-ease);
+}
+
+.toggle:hover {
+  background-color: var(--jp-surface-sunken);
+  color: var(--jp-ink);
+}
+
+/* Icon visibility mirrors the token cascade in tokens.css exactly, so the right
+   icon is correct at first paint (the head script has already set data-theme).
+   A sun shows in dark mode, a moon in light mode. */
+.iconMoon {
+  display: none;
+}
+.iconSun {
+  display: block;
+}
+
+@media (prefers-color-scheme: light) {
+  :global(:root:not([data-theme='dark'])) .iconSun {
+    display: none;
+  }
+  :global(:root:not([data-theme='dark'])) .iconMoon {
+    display: block;
+  }
+}
+
+:global(:root[data-theme='light']) .iconSun {
+  display: none;
+}
+:global(:root[data-theme='light']) .iconMoon {
+  display: block;
+}
+:global(:root[data-theme='dark']) .iconSun {
+  display: block;
+}
+:global(:root[data-theme='dark']) .iconMoon {
+  display: none;
+}

@@ -30,6 +30,17 @@
   min-width: 0;
 }
 
+/* The right-hand cluster: desktop nav (>=900px), the theme toggle (always), and
+   the hamburger (<900px). Grouping them keeps the toggle beside the nav on
+   desktop and beside the hamburger on mobile, and keeps `.inner`'s
+   space-between pinning brand left / this cluster right at every width. */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--jp-space-2);
+  min-width: 0;
+}
+
 /* --- Desktop navigation --------------------------------------------------- */
 
 /* Hidden below 900px, where MobileMenu takes over (project CLAUDE.md,
