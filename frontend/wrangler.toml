@@ -56,6 +56,13 @@ migrations_dir = "migrations"
 # and the AUD tag is a public application identifier. They still must be correct,
 # because `aud` is what stops a token minted for a DIFFERENT application in the
 # same Access team from authenticating here.
+#
+# WEBHOOK_API_KEY is a SECRET and is deliberately ABSENT from every [vars] block
+# below: a value in [vars] is committed to git in plaintext. Set it out-of-band,
+# per environment, and it never touches this file:
+#     wrangler pages secret put WEBHOOK_API_KEY
+# If it is unset, POST /api/webhook/jobs fails closed with 503 (ingestion off) —
+# it is never an open endpoint. See src/pages/api/webhook/jobs.ts.
 [vars]
 APP_ENV = "production"
 ACCESS_TEAM_DOMAIN = "old-morning-ea11.cloudflareaccess.com"

@@ -52,6 +52,13 @@ export interface JobSummary {
   is_featured: boolean;
   apply_url: string;
   status: LooseEnum<JobStatus>;
+  /**
+   * The caller's own id for a webhook-ingested posting (see the "Webhook
+   * ingestion" section of the contract). `null` for every job created through
+   * the admin API. Returned on every job shape so a client can reconcile a
+   * posting against its source system.
+   */
+  external_id: string | null;
   published_at: string | null;
   expires_at: string | null;
   created_at: string;
@@ -141,6 +148,13 @@ export interface JobInput {
   status?: JobStatus;
   /** Omit to keep the existing slug on update, or to derive it on create. */
   slug?: string;
+  /**
+   * Webhook ingestion only (`POST /api/webhook/jobs`). The caller's own id for
+   * the posting, <= 200 chars. Supplying it makes ingestion idempotent: a repeat
+   * delivery updates the matching row instead of creating a duplicate. Ignored
+   * by the admin `POST`/`PUT` handlers.
+   */
+  external_id?: string | null;
 }
 
 // ------------------------------------------------------------- query builders

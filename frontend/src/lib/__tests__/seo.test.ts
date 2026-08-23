@@ -36,6 +36,7 @@ function makeJob(overrides: Partial<Job> = {}): Job {
     is_featured: true,
     apply_url: 'https://example.com/careers/sce',
     status: 'published',
+    external_id: null,
     published_at: '2026-08-20T11:00:00Z',
     expires_at: null,
     created_at: '2026-08-20T10:58:12Z',

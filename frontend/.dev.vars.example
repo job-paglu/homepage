@@ -49,3 +49,15 @@ ACCESS_DEV_BYPASS_EMAIL=dev-admin@example.invalid
 # Keep it false even locally unless you are specifically testing that branch —
 # a value accepted on write and rejected at publish time is a confusing bug.
 ALLOW_HTTP_APPLY_URLS=false
+
+# ----------------------------------------------------- webhook ingestion key
+#
+# SECRET. Bearer key for POST /api/webhook/jobs (machine-to-machine ingestion).
+# In production it is set with `wrangler pages secret put WEBHOOK_API_KEY`, NOT
+# in wrangler.toml [vars]. Locally, put a value here (in .dev.vars, git-ignored)
+# to exercise the endpoint.
+#
+# LEAVE IT BLANK to keep ingestion DISABLED: an unset/empty key makes the
+# endpoint fail closed with 503, never an open endpoint. Set a long random value
+# to turn it on locally, e.g. `openssl rand -hex 32`.
+WEBHOOK_API_KEY=

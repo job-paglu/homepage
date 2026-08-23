@@ -48,6 +48,15 @@ export interface RuntimeEnv {
   readonly ACCESS_AUD?: string;
   readonly ACCESS_DEV_BYPASS_EMAIL?: string;
   readonly ALLOW_HTTP_APPLY_URLS?: string;
+  /**
+   * SECRET bearer key for `POST /api/webhook/jobs`. Set out-of-band with
+   * `wrangler pages secret put WEBHOOK_API_KEY`, never in `[vars]`.
+   *
+   * `readString` maps an unset OR empty/whitespace value to `undefined`, which
+   * is exactly the fail-closed signal the webhook route depends on: no key
+   * configured => the endpoint answers 503, never an open ingestion path.
+   */
+  readonly WEBHOOK_API_KEY?: string;
 }
 
 /** Thrown when a binding or variable the request needs is absent. */
@@ -114,6 +123,10 @@ export function getRuntimeEnv(locals: unknown): RuntimeEnv {
     ACCESS_AUD: readString(source, 'ACCESS_AUD'),
     ACCESS_DEV_BYPASS_EMAIL: readString(source, 'ACCESS_DEV_BYPASS_EMAIL'),
     ALLOW_HTTP_APPLY_URLS: readString(source, 'ALLOW_HTTP_APPLY_URLS'),
+    // A secret, read exactly like the other runtime vars. It is deliberately NOT
+    // given an import.meta.env build-time fallback: a webhook key belongs only
+    // in the runtime secret store, never baked into the bundle.
+    WEBHOOK_API_KEY: readString(source, 'WEBHOOK_API_KEY'),
   };
 }
 

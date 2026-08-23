@@ -259,10 +259,18 @@ export function methodNotAllowed(request: Request): Promise<Response> {
  *
  * The size cap is enforced on BYTES, via arrayBuffer, not on `text().length` —
  * that counts UTF-16 units and would let a body of multi-byte characters exceed
- * 64 KiB. Unknown fields are accepted and ignored (contract section 1) so a
+ * the cap. Unknown fields are accepted and ignored (contract section 1) so a
  * newer admin UI can post a field this API does not know yet.
+ *
+ * `maxBytes` defaults to the contract's 64 KiB admin cap. The webhook ingestion
+ * route passes a larger cap because a batch of up to 50 jobs is legitimately
+ * bigger than one admin form submission — the ONE knob that differs, so the
+ * parse/type/empty rules stay identical across every JSON route.
  */
-export async function readJsonBody(request: Request): Promise<Record<string, unknown>> {
+export async function readJsonBody(
+  request: Request,
+  maxBytes: number = MAX_BODY_BYTES,
+): Promise<Record<string, unknown>> {
   const contentType = request.headers.get('Content-Type');
   if (contentType !== null && contentType.trim() !== '') {
     const mediaType = contentType.split(';')[0]?.trim().toLowerCase() ?? '';
@@ -272,10 +280,10 @@ export async function readJsonBody(request: Request): Promise<Record<string, unk
   }
 
   const declared = Number(request.headers.get('Content-Length') ?? '');
-  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) throw errors.payloadTooLarge();
+  if (Number.isFinite(declared) && declared > maxBytes) throw errors.payloadTooLarge();
 
   const buffer = await request.arrayBuffer();
-  if (buffer.byteLength > MAX_BODY_BYTES) throw errors.payloadTooLarge();
+  if (buffer.byteLength > maxBytes) throw errors.payloadTooLarge();
   if (buffer.byteLength === 0) throw errors.badRequest('A JSON request body is required.');
 
   let parsed: unknown;

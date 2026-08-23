@@ -41,6 +41,16 @@ interface Env {
 
   /** Allow `http://` apply URLs. Default false. Must stay false in production. */
   ALLOW_HTTP_APPLY_URLS?: string;
+
+  /**
+   * SECRET. Bearer key for the machine-to-machine ingestion endpoint
+   * `POST /api/webhook/jobs`. It is NOT in `[vars]` (that is plaintext in git);
+   * set it out-of-band with `wrangler pages secret put WEBHOOK_API_KEY`.
+   *
+   * An UNSET or empty value DISABLES the endpoint — it returns 503, never an
+   * open ingestion path. Never log this value.
+   */
+  WEBHOOK_API_KEY?: string;
 }
 
 type CloudflareRuntime = import('@astrojs/cloudflare').Runtime<Env>;

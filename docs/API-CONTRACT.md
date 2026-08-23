@@ -580,3 +580,102 @@ Content-Type: application/json
   }
 }
 ```
+
+---
+
+## 11. Webhook ingestion
+
+Machine-to-machine job ingestion for automation (Zapier, n8n, a cron, a
+scraper). It creates and upserts jobs with no human logging in.
+
+### `POST /api/webhook/jobs`
+
+- `prerender = false`; `Cache-Control: no-store` on every response.
+- Only `POST`. Any other method is `405 METHOD_NOT_ALLOWED`.
+- **Not** behind Cloudflare Access. Access guards `admin*`; this path does not
+  match, so it is reachable, and it MUST NOT call the Access verifier. Its only
+  auth is the bearer key below.
+
+### 11.1 Authentication — bearer key, fail-closed
+
+- Header `Authorization: Bearer <key>`, compared to the secret `WEBHOOK_API_KEY`.
+- **Fail closed.** If `WEBHOOK_API_KEY` is unset or empty, the endpoint returns
+  `503 SERVICE_UNAVAILABLE` ("ingestion is not configured") and ingests nothing.
+  An unconfigured key is never an open endpoint.
+- The presented key is compared to the configured one in **constant time**,
+  length-independent: both are SHA-256 hashed and the digests compared with an
+  XOR accumulator — never `===` on the raw strings, never a length
+  short-circuit. A missing header, a malformed header and a wrong key are
+  indistinguishable: all are `401 UNAUTHORIZED` with an identical body and
+  comparable timing.
+- No cookie auth, so **CSRF does not apply** — a browser does not attach the
+  `Authorization` header to a forged cross-site request, so there is no token to
+  add.
+
+### 11.2 Request body — single or batch
+
+- Accepts either one job object, or `{ "jobs": [ ... ] }`.
+- Batch cap **50**; more is `422 VALIDATION_FAILED`.
+- Max body **256 KiB**; larger is `413 PAYLOAD_TOO_LARGE`.
+- Each job uses the section-9 shape (7 required fields + optional), plus one new
+  optional field:
+
+| Field | Required | Rules |
+|---|---|---|
+| `external_id` | no | <= 200 chars. The caller's own id for the posting; the idempotency key (11.3). |
+
+`status` is accepted and **defaults to `draft`**. Publishing is opt-in **per
+item** — a leaked key that can only draft is far less dangerous than one that
+can publish. Every item is validated as a section-9 **create**, so a supplied
+`expires_at` must be in the future.
+
+### 11.3 Idempotency
+
+`external_id` makes a delivery idempotent, so a webhook retry does not create
+duplicates:
+
+- **present, and an active (non-deleted) job already carries it** -> that row is
+  **updated** (`action: "updated"`). Its slug stays stable — a changed title
+  does not move a live URL — exactly as `PUT` behaves. An **omitted `status`
+  keeps the existing row's status** (it does not reset to `draft`), so re-firing
+  an event for a published job without a `status` field cannot silently
+  unpublish it; a supplied `status` still applies.
+- **present, no active job carries it** -> insert, storing the id
+  (`action: "created"`).
+- **absent** -> plain insert with auto-slug de-duplication (`action: "created"`).
+
+Publishing semantics are identical to the admin service: `status: "published"`
+sets `published_at` only if it is currently null. A soft-deleted job frees its
+`external_id` (the unique index `jobs_external_id_active` is partial on
+`deleted_at IS NULL`), so a later re-post of that id creates a fresh row.
+
+`external_id` is returned on every job shape (`JobSummary`/`Job`), and is `null`
+for every admin-created job.
+
+### 11.4 Response
+
+Always `200` for a **processed batch**, even when some items fail — the webhook
+convention, so the sender does not retry the whole batch over one bad row. The
+only non-200s are auth/config (`401`/`503`), a malformed body (`400`), and an
+oversized body or batch (`413`/`422`). A single-object request returns the same
+batch shape (one result) for predictability.
+
+```json
+{
+  "data": {
+    "created": 2,
+    "updated": 1,
+    "failed": 1,
+    "results": [
+      { "index": 0, "action": "created", "id": "…", "slug": "senior-cloud-engineer", "external_id": "ATS-1042", "status": "draft" },
+      { "index": 1, "action": "updated", "id": "…", "slug": "…", "external_id": "ATS-1043", "status": "published" },
+      { "index": 3, "action": "failed", "external_id": "ATS-9", "error": { "code": "VALIDATION_FAILED", "message": "…", "details": { "apply_url": "…" } } }
+    ]
+  }
+}
+```
+
+A per-item `error.code` is drawn from the section-6 set (typically
+`VALIDATION_FAILED` or `SLUG_CONFLICT`). A systemic failure — e.g. the database
+is unreachable — is **not** per-item: it aborts the whole batch as `503`, since
+the sender should retry the entire request later.

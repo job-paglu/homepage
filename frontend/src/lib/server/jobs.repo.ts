@@ -27,6 +27,10 @@ export interface JobRecord extends JobFields {
   id: string;
   slug: string;
   status: JobStatus;
+  /** The webhook caller's own id, or null for an admin-created job. It is NOT a
+   *  member of JobFields because no admin write ever sets it — it is settled by
+   *  the ingestion path alone. */
+  external_id: string | null;
   published_at: string | null;
   created_at: string;
   updated_at: string;
@@ -81,7 +85,7 @@ export class RepoError extends Error {
 
 const COLUMNS = `id, slug, title, description, salary, qualification, job_type, location,
   apply_url, company, country, remote_type, experience_level, category,
-  is_featured, status, published_at, expires_at, created_at, updated_at, deleted_at`;
+  is_featured, status, external_id, published_at, expires_at, created_at, updated_at, deleted_at`;
 
 /**
  * The public visibility predicate. `?` is bound with the current timestamp.
@@ -118,6 +122,7 @@ interface JobRow {
   category: string | null;
   is_featured: number;
   status: string;
+  external_id: string | null;
   published_at: string | null;
   expires_at: string | null;
   created_at: string;
@@ -269,6 +274,19 @@ export class JobsRepository {
   }
 
   /**
+   * The active job carrying `externalId`, or null — the lookup half of the
+   * webhook upsert. `deleted_at IS NULL` matches the `jobs_external_id_active`
+   * partial index exactly, so a soft-deleted job's id is treated as free and a
+   * re-post creates a fresh row rather than resurrecting the old one.
+   */
+  async getActiveByExternalId(externalId: string): Promise<JobRecord | null> {
+    return this.one(
+      `SELECT ${COLUMNS} FROM jobs WHERE external_id = ? AND deleted_at IS NULL`,
+      [externalId],
+    );
+  }
+
+  /**
    * Is `slug` used by a live job other than `excludeId`? Pass null on create.
    *
    * The `(? IS NULL OR id <> ?)` form keeps this one statement rather than two
@@ -295,6 +313,37 @@ export class JobsRepository {
     );
     // RETURNING on a successful INSERT always yields the row. A null here means
     // the statement did not insert, which is a bug rather than a 404.
+    if (created === null) throw new RepoError('unavailable', 'INSERT returned no row');
+    return created;
+  }
+
+  /**
+   * INSERT for the webhook, identical to `create` but also storing `external_id`.
+   *
+   * A separate method rather than a parameter on `create` (or a new WRITE_COLUMNS
+   * entry) on purpose: the admin `create`/`update` statements deliberately never
+   * mention `external_id`, so an admin edit can never wipe the id a webhook set,
+   * and an admin create can never accidentally claim one. Only this path writes
+   * the column.
+   *
+   * 21 placeholders: id, then the 17 of WRITE_COLUMNS in order, then external_id,
+   * then created_at and updated_at. A UNIQUE-index violation on external_id is
+   * classified as `slug_conflict` by `classify` (it matches any "UNIQUE
+   * constraint failed"); the service maps that to a per-item failure, which is
+   * the correct outcome for a genuine concurrent double-insert of the same id.
+   */
+  async createWithExternalId(
+    id: string,
+    job: JobWrite,
+    externalId: string | null,
+    now: string,
+  ): Promise<JobRecord> {
+    const created = await this.one(
+      `INSERT INTO jobs (id, ${WRITE_COLUMNS}, external_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       RETURNING ${COLUMNS}`,
+      [id, ...writeBinds(job), externalId, now, now],
+    );
     if (created === null) throw new RepoError('unavailable', 'INSERT returned no row');
     return created;
   }
