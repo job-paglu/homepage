@@ -4,96 +4,107 @@
    The whole visual identity lives here. Nothing else in the codebase should
    contain a raw hex colour, a raw pixel font size, or a magic radius.
 
-   Identity, in one line: deep emerald as the trust colour, warm amber as the
-   single highlight, near-black ink on warm off-white paper. Chosen to be
-   recognisably NOT the blue of LinkedIn / Indeed / WWR, and to read as
-   international and premium rather than corporate.
+   Identity: a DARK, glassy theme matching the apex brand site jobpaglu.eu.cc —
+   near-black base, cyan as the primary accent, indigo as the secondary, with
+   translucent-white borders and dark drop shadows. The two properties (this
+   app on home.jobpaglu.eu.cc and the apex linktree) now read as one brand.
 
-   Contrast (verified by hand against WCAG 2.1):
-     --jp-ink        #0B0D10 on --jp-paper #FDFCFA  ->  19.6:1
-     --jp-ink-muted  #545C66 on --jp-paper          ->   6.4:1   (AA body)
-     --jp-brand      #1F5F4B on white               ->   7.6:1   (AA/AAA text,
-                                                                  and white
-                                                                  text ON it)
-     --jp-accent     #E8A33D on white               ->   2.1:1   -- FAILS as
-       text. Amber is a BACKGROUND/decoration token only, and always carries
-       --jp-ink (9.1:1) on top of it. Never colour text with --jp-accent.
-     --jp-border     #E4E1DB on --jp-paper          ->   1.2:1   -- decorative
-       only; any border that CARRIES MEANING uses --jp-border-strong (3.1:1).
+   Palette lifted from jobpaglu.eu.cc's own tokens:
+     base   #08080c / #101018 / #14141d      accent  cyan  #22d3ee
+     text   #eef0f6 / #a4a9bb / #737890       accent2 indigo #818cf8
+     borders rgba(255,255,255, .09 / .18)     ink-on-accent #04222a
 
-   Dark mode is intentionally NOT shipped in this release. The token structure
-   makes it a single `@media (prefers-color-scheme: dark)` block redefining the
-   semantic layer, but shipping an untested second palette would double the
-   responsive and contrast surface for no requested benefit. See
-   docs/DECISIONS.md D-15.
+   Contrast (verified by hand against WCAG 2.1, all on the base #08080c):
+     --jp-ink        #eef0f6  -> ~18 : 1   (AAA)
+     --jp-ink-muted  #a4a9bb  -> ~8.9: 1   (AA/AAA)
+     --jp-ink-faint  #737890  -> ~4.6: 1   (AA for text; used only for de-
+                                            emphasised metadata)
+     --jp-accent     #818cf8  -> ~5.5: 1   (AA) — indigo is now TEXT-SAFE on the
+                                            dark base, unlike the old amber.
+     --jp-brand      #22d3ee  is light: it is a BACKGROUND for buttons, carrying
+                                --jp-ink-inverse #04222a on top (~9 : 1), and a
+                                foreground only for links/glyphs on the dark base
+                                (very high contrast there). Never put white text
+                                on --jp-brand.
+     --jp-border     rgba(255,255,255,.09) is decorative; a border that CARRIES
+                                MEANING uses --jp-border-strong (.18).
+
+   This is a single-theme (dark) design. There is deliberately no light variant:
+   the brand it matches is dark, and shipping a second palette would double the
+   contrast surface for no benefit. `color-scheme: dark` is declared so native
+   controls, scrollbars and form fields render dark to match.
    ========================================================================== */
 
 :root {
+  color-scheme: dark;
+
   /* --- Raw palette -------------------------------------------------------- */
   /* Only the semantic layer below should be referenced by components. */
-  --jp-c-emerald-900: #123a2e;
-  --jp-c-emerald-700: #1f5f4b;
-  --jp-c-emerald-600: #27735b;
-  --jp-c-emerald-100: #dcefe8;
-  --jp-c-emerald-050: #f1f9f5;
+  --jp-c-base-950: #08080c;   /* page background            */
+  --jp-c-base-900: #101018;   /* sunken / soft background   */
+  --jp-c-base-850: #14141d;   /* solid card surface         */
+  --jp-c-base-800: #1a1a26;   /* raised surface             */
 
-  --jp-c-amber-600: #b9761c;
-  --jp-c-amber-500: #e8a33d;
-  --jp-c-amber-100: #fbeed6;
+  --jp-c-cyan-400: #22d3ee;   /* primary accent             */
+  --jp-c-cyan-300: #4be0f2;   /* accent hover (lighter)     */
+  --jp-c-cyan-500: #0fb9d6;   /* accent active (deeper)     */
+  --jp-c-cyan-200: #b8f4ff;   /* light cyan text / mark     */
+  --jp-c-cyan-ink: #04222a;   /* dark ink placed ON cyan    */
 
-  --jp-c-ink-900: #0b0d10;
-  --jp-c-ink-700: #23282f;
-  --jp-c-ink-500: #545c66;
-  --jp-c-ink-300: #8b939d;
-  --jp-c-ink-200: #c7c9cc;
+  --jp-c-indigo-400: #818cf8; /* secondary accent           */
+  --jp-c-indigo-300: #a5b4fc; /* lighter indigo for text    */
 
-  --jp-c-paper-000: #ffffff;
-  --jp-c-paper-050: #fdfcfa;
-  --jp-c-paper-100: #f6f4f0;
-  --jp-c-paper-200: #edeae4;
+  --jp-c-text-100: #eef0f6;
+  --jp-c-text-200: #cdd2e0;
+  --jp-c-text-300: #a4a9bb;
+  --jp-c-text-500: #737890;
 
-  --jp-c-line-100: #e4e1db;
-  --jp-c-line-300: #b6b1a8;
+  --jp-c-danger-400: #f87171;
+  --jp-c-danger-tint: rgba(248, 113, 113, 0.14);
+  --jp-c-success-400: #34d399;
+  --jp-c-success-tint: rgba(52, 211, 153, 0.14);
 
-  --jp-c-danger-700: #a02622;
-  --jp-c-danger-100: #fbe6e5;
-  --jp-c-success-700: #1c6b46;
-  --jp-c-success-100: #e0f2e8;
+  /* Translucent white scrims — borders and glass fills on the dark base. */
+  --jp-c-white-045: rgba(255, 255, 255, 0.045);
+  --jp-c-white-085: rgba(255, 255, 255, 0.085);
+  --jp-c-white-09: rgba(255, 255, 255, 0.09);
+  --jp-c-white-18: rgba(255, 255, 255, 0.18);
 
   /* --- Semantic colour ---------------------------------------------------- */
-  --jp-paper: var(--jp-c-paper-050);
-  --jp-surface: var(--jp-c-paper-000);
-  --jp-surface-sunken: var(--jp-c-paper-100);
-  --jp-surface-raised: var(--jp-c-paper-000);
+  --jp-paper: var(--jp-c-base-950);
+  --jp-surface: var(--jp-c-base-850);
+  --jp-surface-sunken: var(--jp-c-base-900);
+  --jp-surface-raised: var(--jp-c-base-800);
 
-  --jp-ink: var(--jp-c-ink-900);
-  --jp-ink-soft: var(--jp-c-ink-700);
-  --jp-ink-muted: var(--jp-c-ink-500);
-  --jp-ink-faint: var(--jp-c-ink-300);
-  --jp-ink-inverse: var(--jp-c-paper-000);
+  --jp-ink: var(--jp-c-text-100);
+  --jp-ink-soft: var(--jp-c-text-200);
+  --jp-ink-muted: var(--jp-c-text-300);
+  --jp-ink-faint: var(--jp-c-text-500);
+  /* Dark ink for text placed on the light cyan --jp-brand (buttons). */
+  --jp-ink-inverse: var(--jp-c-cyan-ink);
 
-  --jp-brand: var(--jp-c-emerald-700);
-  --jp-brand-hover: var(--jp-c-emerald-600);
-  --jp-brand-active: var(--jp-c-emerald-900);
-  --jp-brand-tint: var(--jp-c-emerald-100);
-  --jp-brand-wash: var(--jp-c-emerald-050);
+  --jp-brand: var(--jp-c-cyan-400);
+  --jp-brand-hover: var(--jp-c-cyan-300);
+  --jp-brand-active: var(--jp-c-cyan-500);
+  --jp-brand-tint: rgba(34, 211, 238, 0.15);
+  --jp-brand-wash: rgba(34, 211, 238, 0.08);
 
-  /* Decoration and badge backgrounds only. Never use for text. */
-  --jp-accent: var(--jp-c-amber-500);
-  --jp-accent-tint: var(--jp-c-amber-100);
-  /* Text-safe amber, for the rare case a warm foreground is needed. */
-  --jp-accent-text: var(--jp-c-amber-600);
+  /* Indigo secondary accent. Unlike the old amber this IS text-safe on the dark
+     base (~5.5:1), so it can colour a foreground as well as a background. */
+  --jp-accent: var(--jp-c-indigo-400);
+  --jp-accent-tint: rgba(129, 140, 248, 0.15);
+  --jp-accent-text: var(--jp-c-indigo-300);
 
-  --jp-border: var(--jp-c-line-100);
-  --jp-border-strong: var(--jp-c-line-300);
+  --jp-border: var(--jp-c-white-09);
+  --jp-border-strong: var(--jp-c-white-18);
 
-  --jp-danger: var(--jp-c-danger-700);
-  --jp-danger-tint: var(--jp-c-danger-100);
-  --jp-success: var(--jp-c-success-700);
-  --jp-success-tint: var(--jp-c-success-100);
+  --jp-danger: var(--jp-c-danger-400);
+  --jp-danger-tint: var(--jp-c-danger-tint);
+  --jp-success: var(--jp-c-success-400);
+  --jp-success-tint: var(--jp-c-success-tint);
 
-  --jp-focus: var(--jp-c-emerald-700);
-  --jp-selection: var(--jp-c-emerald-100);
+  --jp-focus: var(--jp-c-cyan-400);
+  --jp-selection: rgba(34, 211, 238, 0.28);
 
   /* --- Type -------------------------------------------------------------- */
   /* System stack: zero network requests, zero layout shift, and it already
@@ -172,21 +183,25 @@
   --jp-header-h: 60px;
 
   /* --- Radius ------------------------------------------------------------ */
-  --jp-radius-xs: 4px;
-  --jp-radius-sm: 6px;
-  --jp-radius-md: 10px;
-  --jp-radius-lg: 14px;
-  --jp-radius-xl: 20px;
+  /* Rounder than the old light theme, matching the apex site's soft cards
+     (its --radius-sm 10 / --radius 14 / --radius-lg 18). */
+  --jp-radius-xs: 6px;
+  --jp-radius-sm: 10px;
+  --jp-radius-md: 14px;
+  --jp-radius-lg: 18px;
+  --jp-radius-xl: 24px;
   --jp-radius-pill: 999px;
 
   /* --- Elevation --------------------------------------------------------- */
-  /* Restrained and tinted toward the ink colour rather than pure black, which
-     is what stops shadows looking like a 2014 material-design demo. */
-  --jp-shadow-xs: 0 1px 2px rgba(11, 13, 16, 0.05);
-  --jp-shadow-sm: 0 1px 2px rgba(11, 13, 16, 0.05), 0 2px 6px rgba(11, 13, 16, 0.04);
-  --jp-shadow-md: 0 2px 4px rgba(11, 13, 16, 0.05), 0 8px 20px rgba(11, 13, 16, 0.06);
-  --jp-shadow-lg: 0 4px 8px rgba(11, 13, 16, 0.06), 0 18px 40px rgba(11, 13, 16, 0.09);
-  --jp-shadow-focus: 0 0 0 3px rgba(31, 95, 75, 0.28);
+  /* On a dark base, elevation reads as a real drop shadow plus a hairline of
+     light on the top edge (the border tokens do that part). Shadows are pure
+     black at low alpha, matching the apex site's --shadow scale. */
+  --jp-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --jp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.35);
+  --jp-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.38), 0 8px 24px rgba(0, 0, 0, 0.4);
+  --jp-shadow-lg: 0 8px 20px rgba(0, 0, 0, 0.4), 0 18px 44px rgba(0, 0, 0, 0.5);
+  /* Cyan focus glow, from the accent. */
+  --jp-shadow-focus: 0 0 0 3px rgba(34, 211, 238, 0.35);
 
   /* --- Motion ------------------------------------------------------------ */
   --jp-ease: cubic-bezier(0.2, 0.8, 0.3, 1);

@@ -1,10 +1,13 @@
-/* Deep emerald footer. White text measures 12.6:1 on it and --jp-brand-tint
-   measures 10.5:1, so both tiers of text clear AA comfortably. */
+/* Dark footer, matching the rest of the dark theme. It sits on a slightly
+   sunken surface so it reads as a distinct band against the page, with a
+   hairline top border. Body text is --jp-ink (~18:1 on the surface); secondary
+   text is --jp-ink-muted (~8:1). */
 
 .footer {
   margin-top: var(--jp-section-y);
-  background-color: var(--jp-brand-active);
-  color: var(--jp-ink-inverse);
+  background-color: var(--jp-surface-sunken);
+  border-top: 1px solid var(--jp-border);
+  color: var(--jp-ink);
 }
 
 .inner {
@@ -24,7 +27,7 @@
 .blurb {
   margin-top: var(--jp-space-4);
   max-width: var(--jp-measure-narrow);
-  color: var(--jp-brand-tint);
+  color: var(--jp-ink-muted);
   font-size: var(--jp-text-base);
 }
 
@@ -35,9 +38,11 @@
   margin-top: var(--jp-space-5);
   padding: var(--jp-space-2) var(--jp-space-3);
   border-radius: var(--jp-radius-pill);
-  /* Amber as a background with ink on top — the token's only sanctioned use. */
-  background-color: var(--jp-accent);
-  color: var(--jp-ink);
+  /* Cyan-tinted pill with a matching border and light-cyan text — the
+     accent-as-tint pattern from the apex site, legible on the dark surface. */
+  background-color: var(--jp-brand-tint);
+  border: 1px solid var(--jp-brand);
+  color: var(--jp-brand);
   font-size: var(--jp-text-xs);
   font-weight: var(--jp-weight-semibold);
   letter-spacing: var(--jp-tracking-snug);
@@ -49,7 +54,7 @@
 
 .groupTitle {
   margin-bottom: var(--jp-space-3);
-  color: var(--jp-ink-inverse);
+  color: var(--jp-ink-muted);
   font-size: var(--jp-text-xs);
   font-weight: var(--jp-weight-bold);
   letter-spacing: var(--jp-tracking-caps);
@@ -70,14 +75,14 @@
   /* The footer is the no-JavaScript fallback for mobile navigation, so its
      links carry the same 44px floor as the menu panel. */
   min-height: var(--jp-touch-min);
-  color: var(--jp-brand-tint);
+  color: var(--jp-ink-muted);
   font-size: var(--jp-text-base);
   text-decoration: none;
 }
 
 .link:hover,
 .link:focus-visible {
-  color: var(--jp-ink-inverse);
+  color: var(--jp-brand);
   text-decoration: underline;
 }
 
@@ -88,8 +93,8 @@
   justify-content: space-between;
   gap: var(--jp-space-3);
   padding-block: var(--jp-space-5);
-  border-top: 1px solid rgba(255, 255, 255, 0.16);
-  color: var(--jp-brand-tint);
+  border-top: 1px solid var(--jp-border);
+  color: var(--jp-ink-faint);
   font-size: var(--jp-text-xs);
 }
 

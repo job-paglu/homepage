@@ -50,12 +50,12 @@ const {
 const currentPath = Astro.url.pathname;
 
 /**
- * Brand emerald, for `theme-color` only.
- *
- * A meta tag cannot read a CSS custom property, so this literal is unavoidable.
- * It is --jp-c-emerald-700 in tokens.css and must be changed with it.
+ * The dark base colour, for `theme-color` only (the browser UI / address bar
+ * tint on mobile). A meta tag cannot read a CSS custom property, so this literal
+ * is unavoidable; it is --jp-c-base-950 in tokens.css and matches the apex site's
+ * own dark theme-color. Change it with the token.
  */
-const FAVICON_EMERALD = '#1f5f4b';
+const THEME_COLOR = '#08080c';
 
 /**
  * The favicon is a real file at `public/favicon.svg`, not an inlined data URI.
@@ -79,11 +79,11 @@ const FAVICON_EMERALD = '#1f5f4b';
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     {/* System font stack (tokens.css), so there is nothing to preconnect to and
         no font-display trade-off to make. */}
-    {/* Dark mode is deliberately not shipped (tokens.css / DECISIONS D-15), so
-        the document declares light rather than letting the UA invert form
-        controls against a palette that was never contrast-checked for it. */}
-    <meta name="color-scheme" content="light" />
-    <meta name="theme-color" content={FAVICON_EMERALD} />
+    {/* A single dark theme, matching the apex brand site jobpaglu.eu.cc. The
+        document declares dark so native controls, scrollbars and form fields
+        render against the dark palette they were contrast-checked for. */}
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content={THEME_COLOR} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <SeoHead
       title={title}
