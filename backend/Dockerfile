@@ -12,7 +12,7 @@
 # pivot to. It also starts fast, which matters on any scale-to-zero host.
 
 # ---------------------------------------------------------------- build stage
-FROM golang:1.24-alpine AS build
+FROM golang:1.25-alpine AS build
 
 WORKDIR /src
 
